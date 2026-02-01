@@ -1,26 +1,132 @@
 [
   {
-    "id": "product_1",
-    "name": "Базовая подписка",
-    "description": "Доступ на 30 дней ко всем функциям",
-    "price": 299,
-    "currency": "RUB",
-    "image": "https://via.placeholder.com/300x200?text=Basic"
+    "id": "us_5",
+    "name": "5$ (Америка)",
+    "region": "USA",
+    "currency": "USD",
+    "price": 465,
+    "discount": 0,
+    "description": "Карта пополнения PlayStation Store на 5$ для аккаунта региона США. Моментальная доставка после оплаты.",
+    "image": "https://i.imgur.com/pscard5.png"
   },
   {
-    "id": "product_2",
-    "name": "Премиум подписка",
-    "description": "Доступ на 90 дней + бонусы",
-    "price": 799,
-    "currency": "RUB",
-    "image": "https://via.placeholder.com/300x200?text=Premium"
+    "id": "us_10",
+    "name": "10$ (Америка)",
+    "region": "USA",
+    "currency": "USD",
+    "price": 774,
+    "discount": 10,
+    "description": "Карта пополнения PlayStation Store на 10$ для аккаунта региона США. Моментальная доставка после оплаты.",
+    "image": "https://i.imgur.com/pscard10.png"
   },
   {
-    "id": "product_3",
-    "name": "VIP подписка",
-    "description": "Доступ на 365 дней + все бонусы",
-    "price": 2499,
-    "currency": "RUB",
-    "image": "https://via.placeholder.com/300x200?text=VIP"
+    "id": "us_25",
+    "name": "25$ (Америка)",
+    "region": "USA",
+    "currency": "USD",
+    "price": 1850,
+    "discount": 15,
+    "description": "Карта пополнения PlayStation Store на 25$ для аккаунта региона США. Моментальная доставка после оплаты.",
+    "image": "https://i.imgur.com/pscard25.png"
+  },
+  {
+    "id": "us_50",
+    "name": "50$ (Америка)",
+    "region": "USA",
+    "currency": "USD",
+    "price": 3699,
+    "discount": 20,
+    "description": "Карта пополнения PlayStation Store на 50$ для аккаунта региона США. Моментальная доставка после оплаты.",
+    "image": "https://i.imgur.com/pscard50.png"
+  },
+  {
+    "id": "in_500",
+    "name": "500₹ (Индия)",
+    "region": "India",
+    "currency": "INR",
+    "price": 550,
+    "discount": 0,
+    "description": "Карта пополнения PlayStation Store на 500₹ для аккаунта региона Индия. Моментальная доставка после оплаты.",
+    "image": "https://i.imgur.com/pscard_in500.png"
+  },
+  {
+    "id": "in_1000",
+    "name": "1000₹ (Индия)",
+    "region": "India",
+    "currency": "INR",
+    "price": 1050,
+    "discount": 5,
+    "description": "Карта пополнения PlayStation Store на 1000₹ для аккаунта региона Индия. Моментальная доставка после оплаты.",
+    "image": "https://i.imgur.com/pscard_in1000.png"
+  },
+  {
+    "id": "in_2000",
+    "name": "2000₹ (Индия)",
+    "region": "India",
+    "currency": "INR",
+    "price": 9999,
+    "discount": 99,
+    "description": "Карта пополнения PlayStation Store на 2000₹ для аккаунта региона Индия. Моментальная доставка после оплаты.",
+    "image": "https://i.imgur.com/pscard_in2000.png"
+  },
+  {
+    "id": "pl_50",
+    "name": "50zł (Польша)",
+    "region": "Poland",
+    "currency": "PLN",
+    "price": 1200,
+    "discount": 0,
+    "description": "Карта пополнения PlayStation Store на 50zł для аккаунта региона Польша. Моментальная доставка после оплаты.",
+    "image": "https://i.imgur.com/pscard_pl50.png"
+  },
+  {
+    "id": "pl_100",
+    "name": "100zł (Польша)",
+    "region": "Poland",
+    "currency": "PLN",
+    "price": 2350,
+    "discount": 5,
+    "description": "Карта пополнения PlayStation Store на 100zł для аккаунта региона Польша. Моментальная доставка после оплаты.",
+    "image": "https://i.imgur.com/pscard_pl100.png"
+  },
+  {
+    "id": "pl_250",
+    "name": "250zł (Польша)",
+    "region": "Poland",
+    "currency": "PLN",
+    "price": 5800,
+    "discount": 10,
+    "description": "Карта пополнения PlayStation Store на 250zł для аккаунта региона Польша. Моментальная доставка после оплаты.",
+    "image": "https://i.imgur.com/pscard_pl250.png"
+  },
+  {
+    "id": "tr_50",
+    "name": "50₺ (Турция)",
+    "region": "Turkey",
+    "currency": "TRY",
+    "price": 250,
+    "discount": 0,
+    "description": "Карта пополнения PlayStation Store на 50₺ для аккаунта региона Турция. Моментальная доставка после оплаты.",
+    "image": "https://i.imgur.com/pscard_tr50.png"
+  },
+  {
+    "id": "tr_100",
+    "name": "100₺ (Турция)",
+    "region": "Turkey",
+    "currency": "TRY",
+    "price": 480,
+    "discount": 5,
+    "description": "Карта пополнения PlayStation Store на 100₺ для аккаунта региона Турция. Моментальная доставка после оплаты.",
+    "image": "https://i.imgur.com/pscard_tr100.png"
+  },
+  {
+    "id": "tr_250",
+    "name": "250₺ (Турция)",
+    "region": "Turkey",
+    "currency": "TRY",
+    "price": 1150,
+    "discount": 14,
+    "description": "Карта пополнения PlayStation Store на 250₺ для аккаунта региона Турция. Моментальная доставка после оплаты.",
+    "image": "https://i.imgur.com/pscard_tr250.png"
   }
 ]

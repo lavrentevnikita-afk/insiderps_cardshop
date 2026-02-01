@@ -2,7 +2,13 @@ require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const { handleStart, handleHelp, handleShop, handleCallbackQuery } = require('./handlers');
 const { handlePreCheckoutQuery, handleSuccessfulPayment } = require('./payments');
-const { handleAdminCommand, handleAdminCallback, handleAddKeyCommand } = require('./adminHandlers');
+const { 
+    handleAdminCommand, 
+    handleAdminCallback, 
+    handleAddKeyCommand,
+    handleSetPriceCommand,
+    handleSetDiscountCommand
+} = require('./adminHandlers');
 
 // Проверка наличия токена
 if (!process.env.BOT_TOKEN) {
@@ -43,10 +49,16 @@ bot.onText(/\/admin/, (msg) => handleAdminCommand(bot, msg));
 // Обработка команды /addkey
 bot.onText(/\/addkey/, (msg) => handleAddKeyCommand(bot, msg));
 
+// Обработка команды /setprice
+bot.onText(/\/setprice/, (msg) => handleSetPriceCommand(bot, msg));
+
+// Обработка команды /setdiscount
+bot.onText(/\/setdiscount/, (msg) => handleSetDiscountCommand(bot, msg));
+
 // Обработка callback кнопок
 bot.on('callback_query', async (query) => {
   // Проверяем, это админский callback или обычный
-  if (query.data.startsWith('admin_')) {
+  if (query.data.startsWith('admin_') || query.data.startsWith('edit_product_') || query.data === 'noop') {
     await handleAdminCallback(bot, query);
   } else {
     handleCallbackQuery(bot, query);

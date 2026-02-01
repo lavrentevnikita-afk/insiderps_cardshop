@@ -33,32 +33,52 @@ const app = {
         }
     ],
     products: {
-        usa: [
-            { id: 'us_5', name: '5$ (Америка)', currency: 'USD', price: 465, discount: 0, description: 'Карта пополнения PlayStation Store на 5$ для аккаунта региона США. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard5.png' },
-            { id: 'us_10', name: '10$ (Америка)', currency: 'USD', price: 774, discount: 10, description: 'Карта пополнения PlayStation Store на 10$ для аккаунта региона США. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard10.png' },
-            { id: 'us_25', name: '25$ (Америка)', currency: 'USD', price: 1850, discount: 15, description: 'Карта пополнения PlayStation Store на 25$ для аккаунта региона США. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard25.png' },
-            { id: 'us_50', name: '50$ (Америка)', currency: 'USD', price: 3699, discount: 20, description: 'Карта пополнения PlayStation Store на 50$ для аккаунта региона США. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard50.png' }
-        ],
-        india: [
-            { id: 'in_500', name: '500₹ (Индия)', currency: 'INR', price: 550, discount: 0, description: 'Карта пополнения PlayStation Store на 500₹ для аккаунта региона Индия. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_in500.png' },
-            { id: 'in_1000', name: '1000₹ (Индия)', currency: 'INR', price: 1050, discount: 5, description: 'Карта пополнения PlayStation Store на 1000₹ для аккаунта региона Индия. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_in1000.png' },
-            { id: 'in_2000', name: '2000₹ (Индия)', currency: 'INR', price: 2050, discount: 10, description: 'Карта пополнения PlayStation Store на 2000₹ для аккаунта региона Индия. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_in2000.png' }
-        ],
-        poland: [
-            { id: 'pl_50', name: '50zł (Польша)', currency: 'PLN', price: 1200, discount: 0, description: 'Карта пополнения PlayStation Store на 50zł для аккаунта региона Польша. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_pl50.png' },
-            { id: 'pl_100', name: '100zł (Польша)', currency: 'PLN', price: 2350, discount: 5, description: 'Карта пополнения PlayStation Store на 100zł для аккаунта региона Польша. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_pl100.png' },
-            { id: 'pl_250', name: '250zł (Польша)', currency: 'PLN', price: 5800, discount: 10, description: 'Карта пополнения PlayStation Store на 250zł для аккаунта региона Польша. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_pl250.png' }
-        ],
-        turkey: [
-            { id: 'tr_50', name: '50₺ (Турция)', currency: 'TRY', price: 250, discount: 0, description: 'Карта пополнения PlayStation Store на 50₺ для аккаунта региона Турция. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_tr50.png' },
-            { id: 'tr_100', name: '100₺ (Турция)', currency: 'TRY', price: 480, discount: 5, description: 'Карта пополнения PlayStation Store на 100₺ для аккаунта региона Турция. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_tr100.png' },
-            { id: 'tr_250', name: '250₺ (Турция)', currency: 'TRY', price: 1150, discount: 14, description: 'Карта пополнения PlayStation Store на 250₺ для аккаунта региона Турция. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_tr250.png' }
-        ]
-    }
+        usa: [],
+        india: [],
+        poland: [],
+        turkey: []
+    },
+    productsLoaded: false
 };
 
+// Load products from API
+async function loadProducts() {
+    try {
+        const response = await fetch('/api/products');
+        const products = await response.json();
+        
+        // Группируем товары по регионам
+        app.products = {
+            usa: products.filter(p => p.region === 'USA'),
+            india: products.filter(p => p.region === 'India'),
+            poland: products.filter(p => p.region === 'Poland'),
+            turkey: products.filter(p => p.region === 'Turkey')
+        };
+        
+        app.productsLoaded = true;
+        console.log('✅ Товары загружены:', products.length);
+        
+        // Перезагружаем текущую страницу если нужно
+        if (app.currentPage === 'home') {
+            loadPopularProducts();
+        } else if (app.currentPage === 'catalog' && app.currentRegion) {
+            app.showCatalog(app.currentRegion);
+        }
+    } catch (error) {
+        console.error('❌ Ошибка загрузки товаров:', error);
+        // Fallback на пустые массивы
+        app.products = {
+            usa: [],
+            india: [],
+            poland: [],
+            turkey: []
+        };
+    }
+}
+
 // Initialize app
-function init() {
+async function init() {
+    await loadProducts(); // Загружаем товары с сервера
     loadPromoBanners();
     loadPopularProducts();
     updateCartBadge();

@@ -67,12 +67,32 @@ async function handleProductsAdmin(bot, chatId, userId) {
             message += 'Товары не найдены\n\n';
         } else {
             message += `Всего товаров: ${products.length}\n\n`;
-            products.slice(0, 5).forEach(p => {
-                message += `• ${p.name} - ${p.price}₽\n`;
+            
+            // Группируем по регионам
+            const regions = {
+                'USA': { name: '🇺🇸 США', products: [] },
+                'India': { name: '🇮🇳 Индия', products: [] },
+                'Poland': { name: '🇵🇱 Польша', products: [] },
+                'Turkey': { name: '🇹🇷 Турция', products: [] }
+            };
+            
+            products.forEach(p => {
+                if (regions[p.region]) {
+                    regions[p.region].products.push(p);
+                }
             });
-            if (products.length > 5) {
-                message += `\n... и еще ${products.length - 5} товаров\n`;
-            }
+            
+            Object.keys(regions).forEach(regionKey => {
+                const region = regions[regionKey];
+                if (region.products.length > 0) {
+                    message += `${region.name}:\n`;
+                    region.products.forEach(p => {
+                        const discount = p.discount > 0 ? ` (-${p.discount}%)` : '';
+                        message += `  • ${p.name} - ${p.price}₽${discount}\n`;
+                    });
+                    message += '\n';
+                }
+            });
         }
         
         const keyboard = {
@@ -299,6 +319,95 @@ async function handleAddKeyCommand(bot, msg) {
     });
 }
 
+// Set product price
+async function handleSetPriceCommand(bot, msg) {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    
+    requireAdmin(bot, chatId, userId, () => {
+        const parts = msg.text.split(' ');
+        
+        if (parts.length < 3) {
+            bot.sendMessage(chatId, '❌ Формат: /setprice PRODUCT_ID ЦЕНА\nПример: /setprice us_5 500');
+            return;
+        }
+        
+        const productId = parts[1];
+        const newPrice = parseInt(parts[2]);
+        
+        if (isNaN(newPrice) || newPrice <= 0) {
+            bot.sendMessage(chatId, '❌ Цена должна быть положительным числом');
+            return;
+        }
+        
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        const productIndex = products.findIndex(p => p.id === productId);
+        
+        if (productIndex === -1) {
+            bot.sendMessage(chatId, '❌ Товар не найден');
+            return;
+        }
+        
+        const oldPrice = products[productIndex].price;
+        products[productIndex].price = newPrice;
+        
+        fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
+        
+        bot.sendMessage(chatId, 
+            `✅ Цена товара обновлена!\n\n` +
+            `📦 ${products[productIndex].name}\n` +
+            `💰 Старая цена: ${oldPrice}₽\n` +
+            `💰 Новая цена: ${newPrice}₽`
+        );
+    });
+}
+
+// Set product discount
+async function handleSetDiscountCommand(bot, msg) {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    
+    requireAdmin(bot, chatId, userId, () => {
+        const parts = msg.text.split(' ');
+        
+        if (parts.length < 3) {
+            bot.sendMessage(chatId, '❌ Формат: /setdiscount PRODUCT_ID СКИДКА\nПример: /setdiscount us_5 15');
+            return;
+        }
+        
+        const productId = parts[1];
+        const newDiscount = parseInt(parts[2]);
+        
+        if (isNaN(newDiscount) || newDiscount < 0 || newDiscount > 100) {
+            bot.sendMessage(chatId, '❌ Скидка должна быть от 0 до 100');
+            return;
+        }
+        
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        const productIndex = products.findIndex(p => p.id === productId);
+        
+        if (productIndex === -1) {
+            bot.sendMessage(chatId, '❌ Товар не найден');
+            return;
+        }
+        
+        const oldDiscount = products[productIndex].discount;
+        products[productIndex].discount = newDiscount;
+        
+        fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
+        
+        bot.sendMessage(chatId, 
+            `✅ Скидка обновлена!\n\n` +
+            `📦 ${products[productIndex].name}\n` +
+            `🏷 Старая скидка: ${oldDiscount}%\n` +
+            `🏷 Новая скидка: ${newDiscount}%\n` +
+            `💰 Цена со скидкой: ${products[productIndex].price}₽`
+        );
+    });
+}
+
 // Handle admin callbacks
 async function handleAdminCallback(bot, query) {
     const chatId = query.message.chat.id;
@@ -317,7 +426,12 @@ async function handleAdminCallback(bot, query) {
     
     switch(data) {
         case 'admin_back':
-            await handleAdminCommand(bot, query.message);
+            // Создаем объект msg с правильной структурой для handleAdminCommand
+            const mockMsg = {
+                chat: { id: chatId },
+                from: { id: userId }
+            };
+            await handleAdminCommand(bot, mockMsg);
             break;
         case 'admin_products':
             await handleProductsAdmin(bot, chatId, userId);
@@ -337,8 +451,10 @@ async function handleAdminCallback(bot, query) {
         case 'admin_add_keys':
             await handleAddKeys(bot, chatId, userId);
             break;
-        case 'admin_add_product':
         case 'admin_edit_product':
+            await handleEditProductList(bot, chatId, userId);
+            break;
+        case 'admin_add_product':
         case 'admin_delete_product':
         case 'admin_view_keys':
         case 'admin_view_orders':
@@ -350,12 +466,115 @@ async function handleAdminCallback(bot, query) {
                 }
             });
             break;
+        default:
+            // Обработка редактирования конкретного товара
+            if (data.startsWith('edit_product_')) {
+                const productId = data.replace('edit_product_', '');
+                await handleEditProductForm(bot, chatId, userId, productId);
+            }
+            break;
     }
+}
+
+// Show list of products to edit
+async function handleEditProductList(bot, chatId, userId) {
+    requireAdmin(bot, chatId, userId, async () => {
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        
+        const keyboard = {
+            inline_keyboard: []
+        };
+        
+        // Группируем по регионам
+        const regions = {
+            'USA': { name: '🇺🇸 США', products: [] },
+            'India': { name: '🇮🇳 Индия', products: [] },
+            'Poland': { name: '🇵🇱 Польша', products: [] },
+            'Turkey': { name: '🇹🇷 Турция', products: [] }
+        };
+        
+        products.forEach(p => {
+            if (regions[p.region]) {
+                regions[p.region].products.push(p);
+            }
+        });
+        
+        Object.keys(regions).forEach(regionKey => {
+            const region = regions[regionKey];
+            if (region.products.length > 0) {
+                // Заголовок региона
+                keyboard.inline_keyboard.push([
+                    { text: region.name, callback_data: 'noop' }
+                ]);
+                // Товары региона
+                region.products.forEach(p => {
+                    const discount = p.discount > 0 ? ` (-${p.discount}%)` : '';
+                    keyboard.inline_keyboard.push([
+                        { text: `${p.name} - ${p.price}₽${discount}`, callback_data: `edit_product_${p.id}` }
+                    ]);
+                });
+            }
+        });
+        
+        keyboard.inline_keyboard.push([
+            { text: '« Назад', callback_data: 'admin_products' }
+        ]);
+        
+        await bot.sendMessage(chatId, 
+            '✏️ *Выберите товар для редактирования:*',
+            {
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            }
+        );
+    });
+}
+
+// Show edit form for specific product
+async function handleEditProductForm(bot, chatId, userId, productId) {
+    requireAdmin(bot, chatId, userId, async () => {
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        const product = products.find(p => p.id === productId);
+        
+        if (!product) {
+            await bot.sendMessage(chatId, '❌ Товар не найден');
+            return;
+        }
+        
+        const message = `✏️ *Редактирование товара*\n\n` +
+                       `📦 Товар: ${product.name}\n` +
+                       `💰 Текущая цена: ${product.price}₽\n` +
+                       `🏷 Текущая скидка: ${product.discount}%\n` +
+                       `💵 Валюта: ${product.currency}\n\n` +
+                       `Для изменения отправьте команду:\n\n` +
+                       `\`/setprice ${productId} НОВАЯ_ЦЕНА\`\n` +
+                       `Пример: \`/setprice ${productId} 500\`\n\n` +
+                       `\`/setdiscount ${productId} СКИДКА\`\n` +
+                       `Пример: \`/setdiscount ${productId} 15\``;
+        
+        await bot.sendMessage(chatId, message, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        { text: '« К списку товаров', callback_data: 'admin_edit_product' }
+                    ],
+                    [
+                        { text: '« Назад', callback_data: 'admin_products' }
+                    ]
+                ]
+            }
+        });
+    });
 }
 
 module.exports = {
     handleAdminCommand,
     handleAdminCallback,
     handleAddKeyCommand,
+    handleSetPriceCommand,
+    handleSetDiscountCommand,
     isAdmin
 };
