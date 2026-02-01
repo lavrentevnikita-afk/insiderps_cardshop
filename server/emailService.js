@@ -78,7 +78,7 @@ async function sendKeysEmail(email, keys, total) {
   `).join('');
   
   const mailOptions = {
-    from: `"PlayStation Cards Shop" <${process.env.SMTP_USER || 'noreply@psshop.com'}>`,
+    from: process.env.EMAIL_FROM || `"PlayStation Cards Shop" <${process.env.SMTP_USER}>`,
     to: email,
     subject: '🎮 Ваши коды активации PlayStation',
     text: `
