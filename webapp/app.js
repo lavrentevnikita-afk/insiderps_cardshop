@@ -34,25 +34,25 @@ const app = {
     ],
     products: {
         usa: [
-            { id: 'us_5', name: '5$ (Америка)', currency: 'USD', price: 465, discount: 0, description: 'Карта пополнения PlayStation Store на 5$ для аккаунта региона США. Моментальная доставка после оплаты.' },
-            { id: 'us_10', name: '10$ (Америка)', currency: 'USD', price: 774, discount: 10, description: 'Карта пополнения PlayStation Store на 10$ для аккаунта региона США. Моментальная доставка после оплаты.' },
-            { id: 'us_25', name: '25$ (Америка)', currency: 'USD', price: 1850, discount: 15, description: 'Карта пополнения PlayStation Store на 25$ для аккаунта региона США. Моментальная доставка после оплаты.' },
-            { id: 'us_50', name: '50$ (Америка)', currency: 'USD', price: 3699, discount: 20, description: 'Карта пополнения PlayStation Store на 50$ для аккаунта региона США. Моментальная доставка после оплаты.' }
+            { id: 'us_5', name: '5$ (Америка)', currency: 'USD', price: 465, discount: 0, description: 'Карта пополнения PlayStation Store на 5$ для аккаунта региона США. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard5.png' },
+            { id: 'us_10', name: '10$ (Америка)', currency: 'USD', price: 774, discount: 10, description: 'Карта пополнения PlayStation Store на 10$ для аккаунта региона США. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard10.png' },
+            { id: 'us_25', name: '25$ (Америка)', currency: 'USD', price: 1850, discount: 15, description: 'Карта пополнения PlayStation Store на 25$ для аккаунта региона США. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard25.png' },
+            { id: 'us_50', name: '50$ (Америка)', currency: 'USD', price: 3699, discount: 20, description: 'Карта пополнения PlayStation Store на 50$ для аккаунта региона США. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard50.png' }
         ],
         india: [
-            { id: 'in_500', name: '500₹ (Индия)', currency: 'INR', price: 550, discount: 0, description: 'Карта пополнения PlayStation Store на 500₹ для аккаунта региона Индия. Моментальная доставка после оплаты.' },
-            { id: 'in_1000', name: '1000₹ (Индия)', currency: 'INR', price: 1050, discount: 5, description: 'Карта пополнения PlayStation Store на 1000₹ для аккаунта региона Индия. Моментальная доставка после оплаты.' },
-            { id: 'in_2000', name: '2000₹ (Индия)', currency: 'INR', price: 2050, discount: 10, description: 'Карта пополнения PlayStation Store на 2000₹ для аккаунта региона Индия. Моментальная доставка после оплаты.' }
+            { id: 'in_500', name: '500₹ (Индия)', currency: 'INR', price: 550, discount: 0, description: 'Карта пополнения PlayStation Store на 500₹ для аккаунта региона Индия. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_in500.png' },
+            { id: 'in_1000', name: '1000₹ (Индия)', currency: 'INR', price: 1050, discount: 5, description: 'Карта пополнения PlayStation Store на 1000₹ для аккаунта региона Индия. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_in1000.png' },
+            { id: 'in_2000', name: '2000₹ (Индия)', currency: 'INR', price: 2050, discount: 10, description: 'Карта пополнения PlayStation Store на 2000₹ для аккаунта региона Индия. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_in2000.png' }
         ],
         poland: [
-            { id: 'pl_50', name: '50zł (Польша)', currency: 'PLN', price: 1200, discount: 0, description: 'Карта пополнения PlayStation Store на 50zł для аккаунта региона Польша. Моментальная доставка после оплаты.' },
-            { id: 'pl_100', name: '100zł (Польша)', currency: 'PLN', price: 2350, discount: 5, description: 'Карта пополнения PlayStation Store на 100zł для аккаунта региона Польша. Моментальная доставка после оплаты.' },
-            { id: 'pl_250', name: '250zł (Польша)', currency: 'PLN', price: 5800, discount: 10, description: 'Карта пополнения PlayStation Store на 250zł для аккаунта региона Польша. Моментальная доставка после оплаты.' }
+            { id: 'pl_50', name: '50zł (Польша)', currency: 'PLN', price: 1200, discount: 0, description: 'Карта пополнения PlayStation Store на 50zł для аккаунта региона Польша. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_pl50.png' },
+            { id: 'pl_100', name: '100zł (Польша)', currency: 'PLN', price: 2350, discount: 5, description: 'Карта пополнения PlayStation Store на 100zł для аккаунта региона Польша. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_pl100.png' },
+            { id: 'pl_250', name: '250zł (Польша)', currency: 'PLN', price: 5800, discount: 10, description: 'Карта пополнения PlayStation Store на 250zł для аккаунта региона Польша. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_pl250.png' }
         ],
         turkey: [
-            { id: 'tr_50', name: '50₺ (Турция)', currency: 'TRY', price: 250, discount: 0, description: 'Карта пополнения PlayStation Store на 50₺ для аккаунта региона Турция. Моментальная доставка после оплаты.' },
-            { id: 'tr_100', name: '100₺ (Турция)', currency: 'TRY', price: 480, discount: 5, description: 'Карта пополнения PlayStation Store на 100₺ для аккаунта региона Турция. Моментальная доставка после оплаты.' },
-            { id: 'tr_250', name: '250₺ (Турция)', currency: 'TRY', price: 1150, discount: 14, description: 'Карта пополнения PlayStation Store на 250₺ для аккаунта региона Турция. Моментальная доставка после оплаты.' }
+            { id: 'tr_50', name: '50₺ (Турция)', currency: 'TRY', price: 250, discount: 0, description: 'Карта пополнения PlayStation Store на 50₺ для аккаунта региона Турция. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_tr50.png' },
+            { id: 'tr_100', name: '100₺ (Турция)', currency: 'TRY', price: 480, discount: 5, description: 'Карта пополнения PlayStation Store на 100₺ для аккаунта региона Турция. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_tr100.png' },
+            { id: 'tr_250', name: '250₺ (Турция)', currency: 'TRY', price: 1150, discount: 14, description: 'Карта пополнения PlayStation Store на 250₺ для аккаунта региона Турция. Моментальная доставка после оплаты.', image: 'https://i.imgur.com/pscard_tr250.png' }
         ]
     }
 };
@@ -103,15 +103,14 @@ function createProductCard(product) {
         ? `<div class="product-discount">-${product.discount}%</div>` 
         : '';
     
+    const imageUrl = product.image || 'https://via.placeholder.com/400x250/003087/00a8ff?text=PlayStation+Card';
+    
     return `
         <div class="product-card" onclick="app.showProduct('${product.id}')">
             ${discountTag}
             <div class="product-favorite">⭐</div>
             <div class="product-image">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">
-                    <path fill="currentColor" d="M25 2L2 13v24l23 11 23-11V13L25 2zm0 4.4l18.6 8.9v19.4L25 43.6 6.4 34.7V15.3L25 6.4z"/>
-                    <path fill="currentColor" d="M25 15c-5.5 0-10 4.5-10 10s4.5 10 10 10 10-4.5 10-10-4.5-10-10-10zm0 16c-3.3 0-6-2.7-6-6s2.7-6 6-6 6 2.7 6 6-2.7 6-6 6z"/>
-                </svg>
+                <img src="${imageUrl}" alt="${product.name}" onerror="this.src='https://via.placeholder.com/400x250/003087/00a8ff?text=PlayStation+Card'">
             </div>
             <div class="product-info">
                 <div class="product-title">
@@ -170,12 +169,11 @@ app.showProduct = function(productId) {
     const container = document.getElementById('product-detail');
     const originalPrice = product.discount > 0 ? Math.round(product.price / (1 - product.discount / 100)) : product.price;
     
+    const imageUrl = product.image || 'https://via.placeholder.com/800x500/003087/00a8ff?text=PlayStation+Card';
+    
     container.innerHTML = `
         <div class="product-detail-image">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">
-                <path fill="currentColor" d="M25 2L2 13v24l23 11 23-11V13L25 2zm0 4.4l18.6 8.9v19.4L25 43.6 6.4 34.7V15.3L25 6.4z"/>
-                <path fill="currentColor" d="M25 15c-5.5 0-10 4.5-10 10s4.5 10 10 10 10-4.5 10-10-4.5-10-10-10zm0 16c-3.3 0-6-2.7-6-6s2.7-6 6-6 6 2.7 6 6-2.7 6-6 6z"/>
-            </svg>
+            <img src="${imageUrl}" alt="${product.name}" onerror="this.src='https://via.placeholder.com/800x500/003087/00a8ff?text=PlayStation+Card'">
         </div>
         <div class="product-detail-content">
             <div class="product-detail-header">
