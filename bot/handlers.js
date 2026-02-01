@@ -26,12 +26,19 @@ function handleStart(bot, msg) {
   const keyboard = {
     inline_keyboard: [
       [
-        { text: '❓ Помощь', callback_data: 'help' }
+        { text: '🛍 Перейти в магазин', callback_data: 'shop' }
+      ],
+      [
+        { text: '❓ Помощь', callback_data: 'help' },
+        { text: '⭐ Отзывы', url: 'https://t.me/addlist/YOUR_CHANNEL' }
+      ],
+      [
+        { text: '💬 Чат с поддержкой', url: 'https://t.me/insider_mngr' }
       ]
     ]
   };
 
-  bot.sendMessage(chatId, welcomeMessage + '\n\n⚠️ Web App будет доступен после деплоя на HTTPS хостинг', { reply_markup: keyboard });
+  bot.sendMessage(chatId, welcomeMessage, { reply_markup: keyboard });
 }
 
 // Обработчик команды /help
@@ -77,6 +84,8 @@ function handleCallbackQuery(bot, query) {
   
   if (query.data === 'help') {
     handleHelp(bot, { chat: { id: chatId } });
+  } else if (query.data === 'shop') {
+    handleShop(bot, { chat: { id: chatId } });
   }
   
   bot.answerCallbackQuery(query.id);
