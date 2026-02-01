@@ -520,9 +520,6 @@ function renderCart() {
                 return `
                 <div class="cart-item ${regionClass}">
                     <div class="cart-item-image">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">
-                            <path fill="currentColor" d="M25 2L2 13v24l23 11 23-11V13L25 2zm0 4.4l18.6 8.9v19.4L25 43.6 6.4 34.7V15.3L25 6.4z"/>
-                        </svg>
                     </div>
                     <div class="cart-item-info">
                         <div class="cart-item-title">${item.name}</div>
