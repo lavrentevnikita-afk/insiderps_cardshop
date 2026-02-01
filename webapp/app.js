@@ -42,6 +42,76 @@ const app = {
     productsLoaded: false
 };
 
+// Check for price changes
+function checkPriceChanges(newProducts) {
+    const savedPrices = JSON.parse(localStorage.getItem('productPrices') || '{}');
+    const priceChanges = [];
+    
+    newProducts.forEach(product => {
+        const savedProduct = savedPrices[product.id];
+        if (savedProduct) {
+            // Check price change
+            if (savedProduct.price !== product.price) {
+                const diff = product.price - savedProduct.price;
+                const isIncrease = diff > 0;
+                priceChanges.push({
+                    product,
+                    oldPrice: savedProduct.price,
+                    newPrice: product.price,
+                    diff: Math.abs(diff),
+                    isIncrease
+                });
+            }
+            // Check discount change
+            if (savedProduct.discount !== product.discount) {
+                const diff = product.discount - savedProduct.discount;
+                if (diff > 0) {
+                    // Discount increased - good news!
+                    priceChanges.push({
+                        product,
+                        type: 'discount',
+                        oldDiscount: savedProduct.discount,
+                        newDiscount: product.discount,
+                        diff
+                    });
+                }
+            }
+        }
+    });
+    
+    // Save current prices
+    const currentPrices = {};
+    newProducts.forEach(p => {
+        currentPrices[p.id] = { price: p.price, discount: p.discount };
+    });
+    localStorage.setItem('productPrices', JSON.stringify(currentPrices));
+    
+    // Show notifications for price changes (only if not first visit)
+    if (Object.keys(savedPrices).length > 0 && priceChanges.length > 0) {
+        priceChanges.forEach(change => {
+            if (change.type === 'discount') {
+                Toast.success(
+                    '🎉 Скидка увеличена!',
+                    `${change.product.name}: ${change.oldDiscount}% → ${change.newDiscount}%`,
+                    4000
+                );
+            } else if (!change.isIncrease) {
+                Toast.success(
+                    '💰 Цена снижена!',
+                    `${change.product.name}: ${change.oldPrice}₽ → ${change.newPrice}₽`,
+                    4000
+                );
+            } else {
+                Toast.info(
+                    'Цена изменена',
+                    `${change.product.name}: ${change.oldPrice}₽ → ${change.newPrice}₽`,
+                    3000
+                );
+            }
+        });
+    }
+}
+
 // Load products from API
 async function loadProducts() {
     // Show skeletons
@@ -52,6 +122,9 @@ async function loadProducts() {
         if (!response.ok) throw new Error('API not available');
         
         const products = await response.json();
+        
+        // Check for price changes
+        checkPriceChanges(products);
         
         // Группируем товары по регионам
         app.products = {
@@ -111,6 +184,32 @@ async function init() {
     updateCartBadge();
     app.showPage('home');
     animateProductCards();
+    
+    // Periodic price check every 5 minutes
+    setInterval(async () => {
+        try {
+            const response = await fetch('/api/products');
+            if (response.ok) {
+                const products = await response.json();
+                checkPriceChanges(products);
+                
+                // Update products silently
+                app.products = {
+                    usa: products.filter(p => p.region === 'USA'),
+                    india: products.filter(p => p.region === 'India'),
+                    poland: products.filter(p => p.region === 'Poland'),
+                    turkey: products.filter(p => p.region === 'Turkey')
+                };
+                
+                // Refresh current view if needed
+                if (app.currentPage === 'catalog' && app.currentRegion) {
+                    renderCatalog();
+                }
+            }
+        } catch (error) {
+            console.log('Price check failed:', error);
+        }
+    }, 5 * 60 * 1000); // 5 minutes
 }
 
 // Load promo banners
@@ -297,8 +396,10 @@ app.addToCart = function(productId) {
     const existingItem = app.cart.find(item => item.id === productId);
     if (existingItem) {
         existingItem.quantity++;
+        Toast.success('Количество увеличено', `${product.name} теперь в корзине (${existingItem.quantity} шт.)`);
     } else {
         app.cart.push({ ...product, quantity: 1 });
+        Toast.success('Добавлено в корзину', product.name);
     }
     
     saveCart();
@@ -307,8 +408,6 @@ app.addToCart = function(productId) {
     if (tg.HapticFeedback) {
         tg.HapticFeedback.notificationOccurred('success');
     }
-    
-    tg.showAlert('Товар добавлен в корзину!');
 };
 
 // Buy now
@@ -320,10 +419,15 @@ app.buyNow = function(productId) {
 
 // Remove from cart
 app.removeFromCart = function(productId) {
+    const product = app.cart.find(item => item.id === productId);
     app.cart = app.cart.filter(item => item.id !== productId);
     saveCart();
     updateCartBadge();
     renderCart();
+    
+    if (product) {
+        Toast.info('Удалено из корзины', product.name);
+    }
     
     if (tg.HapticFeedback) {
         tg.HapticFeedback.notificationOccurred('warning');
@@ -436,11 +540,7 @@ window.checkout = async function() {
     const email = document.getElementById('email')?.value;
     
     if (!email || !email.includes('@')) {
-        if (tg.showAlert) {
-            tg.showAlert('Пожалуйста, введите корректный E-mail');
-        } else {
-            alert('Пожалуйста, введите корректный E-mail');
-        }
+        Toast.warning('Введите корректный email', 'Email обязателен для получения кодов');
         return;
     }
     
@@ -484,9 +584,8 @@ window.checkout = async function() {
             const result = await response.json();
             
             if (result.success) {
-                if (tg.showAlert) {
-                    tg.showAlert('✅ Заказ оформлен! Коды отправлены в бот.');
-                }
+                Toast.success('✅ Заказ оформлен!', 'Коды отправлены в Telegram бот', 3000);
+                
                 // Очищаем корзину
                 app.cart = [];
                 saveCart();
@@ -502,11 +601,7 @@ window.checkout = async function() {
             }
         } catch (error) {
             console.error('❌ Ошибка отправки заказа:', error);
-            if (tg.showAlert) {
-                tg.showAlert('❌ Ошибка оформления заказа. Попробуйте снова.');
-            } else {
-                alert('❌ Ошибка оформления заказа. Попробуйте снова.');
-            }
+            Toast.error('Ошибка оформления заказа', 'Попробуйте снова', 4000);
         }
     } else {
         // Запущено через браузер - отправляем на email
@@ -524,7 +619,7 @@ window.checkout = async function() {
             const result = await response.json();
             
             if (result.success) {
-                alert(`✅ Заказ оформлен!\n\nКоды отправлены на: ${email}\n\nПроверьте почту через несколько минут.`);
+                Toast.success('✅ Заказ оформлен!', `Коды отправлены на ${email}`, 4000);
                 
                 // Очищаем корзину
                 app.cart = [];
@@ -711,3 +806,94 @@ function createOrderCard(order) {
         </div>
     `;
 }
+// ============================================
+// TOAST NOTIFICATIONS SYSTEM
+// ============================================
+
+const Toast = {
+    container: null,
+    
+    init() {
+        this.container = document.getElementById('toast-container');
+        if (!this.container) {
+            this.container = document.createElement('div');
+            this.container.id = 'toast-container';
+            this.container.className = 'toast-container';
+            document.body.appendChild(this.container);
+        }
+    },
+    
+    show(options) {
+        this.init();
+        
+        const {
+            type = 'info', // success, info, warning, error
+            title = '',
+            message = '',
+            duration = 3000,
+            icon = null
+        } = options;
+        
+        // Default icons
+        const icons = {
+            success: '✓',
+            info: 'ℹ',
+            warning: '⚠',
+            error: '✕'
+        };
+        
+        const toastIcon = icon || icons[type] || icons.info;
+        
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        toast.innerHTML = `
+            <div class="toast-icon">${toastIcon}</div>
+            <div class="toast-content">
+                ${title ? `<div class="toast-title">${title}</div>` : ''}
+                ${message ? `<div class="toast-message">${message}</div>` : ''}
+            </div>
+            <button class="toast-close" onclick="Toast.remove(this.parentElement)">✕</button>
+            ${duration > 0 ? '<div class="toast-progress"></div>' : ''}
+        `;
+        
+        this.container.appendChild(toast);
+        
+        // Auto remove after duration
+        if (duration > 0) {
+            setTimeout(() => {
+                this.remove(toast);
+            }, duration);
+        }
+        
+        return toast;
+    },
+    
+    remove(toast) {
+        if (!toast || !toast.parentElement) return;
+        
+        toast.classList.add('toast-removing');
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.parentElement.removeChild(toast);
+            }
+        }, 300);
+    },
+    
+    success(title, message = '', duration = 3000) {
+        return this.show({ type: 'success', title, message, duration });
+    },
+    
+    info(title, message = '', duration = 3000) {
+        return this.show({ type: 'info', title, message, duration });
+    },
+    
+    warning(title, message = '', duration = 3000) {
+        return this.show({ type: 'warning', title, message, duration });
+    },
+    
+    error(title, message = '', duration = 3000) {
+        return this.show({ type: 'error', title, message, duration });
+    }
+};
