@@ -218,9 +218,6 @@ async function loadProducts() {
 
 // Initialize app
 async function init() {
-    // Initialize theme
-    initTheme();
-    
     await loadProducts(); // Загружаем товары с сервера
     loadPromoBanners();
     loadPopularProducts();
@@ -891,24 +888,6 @@ function showSkeletons() {
     `;
     popularContainer.innerHTML = skeletonHTML;
 }
-
-// Theme management
-function initTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    if (savedTheme === 'light') {
-        document.body.classList.add('light-theme');
-    }
-}
-
-app.toggleTheme = function() {
-    document.body.classList.toggle('light-theme');
-    const isLight = document.body.classList.contains('light-theme');
-    localStorage.setItem('theme', isLight ? 'light' : 'dark');
-    
-    if (tg.HapticFeedback) {
-        tg.HapticFeedback.impactOccurred('medium');
-    }
-};
 
 // Load orders history
 app.loadOrders = async function() {
