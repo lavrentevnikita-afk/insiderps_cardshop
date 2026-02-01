@@ -76,20 +76,6 @@ const app = {
     previousPage: null,
     currentSort: 'default',
     cart: JSON.parse(localStorage.getItem('cart') || '[]'),
-    promoBanners: [
-        {
-            id: 1,
-            enabled: true,
-            title: 'НЕ ХВАТАЕТ ПРИМОГЕМОВ?',
-            subtitle: 'САМЫЕ НИЗКИЕ ЦЕНЫ!'
-        },
-        {
-            id: 2,
-            enabled: true,
-            title: 'НЕ УПУСКАЙ ЛУЧШИЕ ПРОМОКОДЫ',
-            subtitle: 'В НАШЕМ ПРИЛОЖЕНИИ'
-        }
-    ],
     products: {
         usa: [],
         india: [],
@@ -273,16 +259,56 @@ async function init() {
 }
 
 // Load promo banners
-function loadPromoBanners() {
+async function loadPromoBanners() {
     const slider = document.getElementById('promo-slider');
-    const activeBanners = app.promoBanners.filter(b => b.enabled);
     
-    if (activeBanners.length > 0) {
-        const banner = activeBanners[0]; // Show first banner
+    try {
+        // Load banners from API
+        const response = await fetch('/api/banners');
+        if (response.ok) {
+            const banners = await response.json();
+            
+            if (banners.length > 0) {
+                const banner = banners[0]; // Show first active banner
+                
+                let bannerHTML = '<div class="promo-banner">';
+                
+                if (banner.image) {
+                    bannerHTML += `<div class="promo-banner-image" style="background-image: url('${banner.image}')"></div>`;
+                }
+                
+                bannerHTML += '<div class="promo-banner-content">';
+                bannerHTML += `<h3>${banner.title}</h3>`;
+                bannerHTML += `<p>${banner.subtitle}</p>`;
+                bannerHTML += '</div>';
+                
+                if (banner.link) {
+                    bannerHTML = `<a href="${banner.link}" target="_blank" class="promo-banner-link">${bannerHTML}</a>`;
+                }
+                
+                bannerHTML += '</div>';
+                
+                slider.innerHTML = bannerHTML;
+            } else {
+                slider.innerHTML = ''; // Hide if no banners
+            }
+        } else {
+            // Fallback to hardcoded banners
+            console.log('Failed to load banners from API, using default');
+            slider.innerHTML = `
+                <div class="promo-banner">
+                    <h3>НЕ ХВАТАЕТ ПРИМОГЕМОВ?</h3>
+                    <p>САМЫЕ НИЗКИЕ ЦЕНЫ!</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading banners:', error);
+        // Fallback to hardcoded banner
         slider.innerHTML = `
             <div class="promo-banner">
-                <h3>${banner.title}</h3>
-                <p>${banner.subtitle}</p>
+                <h3>НЕ ХВАТАЕТ ПРИМОГЕМОВ?</h3>
+                <p>САМЫЕ НИЗКИЕ ЦЕНЫ!</p>
             </div>
         `;
     }

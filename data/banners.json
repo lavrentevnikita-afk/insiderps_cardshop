@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "enabled": true,
+    "title": "НЕ ХВАТАЕТ ПРИМОГЕМОВ?",
+    "subtitle": "САМЫЕ НИЗКИЕ ЦЕНЫ!",
+    "image": null,
+    "link": null,
+    "order": 1
+  },
+  {
+    "id": 2,
+    "enabled": true,
+    "title": "НЕ УПУСКАЙ ЛУЧШИЕ ПРОМОКОДЫ",
+    "subtitle": "В НАШЕМ ПРИЛОЖЕНИИ",
+    "image": null,
+    "link": null,
+    "order": 2
+  }
+]

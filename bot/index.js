@@ -10,7 +10,9 @@ const {
     handleSetDiscountCommand,
     handleBulkPriceCommand,
     handleBulkDiscountCommand,
-    handleResetDiscountsCommand
+    handleResetDiscountsCommand,
+    handleBannersCommand,
+    handleBannerCallback
 } = require('./adminHandlers');
 
 // Проверка наличия токена
@@ -67,11 +69,19 @@ bot.onText(/\/bulkdiscount/, (msg) => handleBulkDiscountCommand(bot, msg));
 // Обработка команды /resetdiscounts
 bot.onText(/\/resetdiscounts/, (msg) => handleResetDiscountsCommand(bot, msg));
 
+// Обработка команды /banners
+bot.onText(/\/banners/, (msg) => handleBannersCommand(bot, msg));
+
 // Обработка callback кнопок
 bot.on('callback_query', async (query) => {
   // Проверяем, это админский callback или обычный
-  if (query.data.startsWith('admin_') || query.data.startsWith('edit_product_') || query.data === 'noop') {
-    await handleAdminCallback(bot, query);
+  if (query.data.startsWith('admin_') || query.data.startsWith('edit_product_') || 
+      query.data.startsWith('banner_') || query.data === 'noop') {
+    if (query.data.startsWith('banner_')) {
+      await handleBannerCallback(bot, query);
+    } else {
+      await handleAdminCallback(bot, query);
+    }
   } else {
     handleCallbackQuery(bot, query);
   }

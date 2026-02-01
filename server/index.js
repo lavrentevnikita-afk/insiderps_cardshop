@@ -16,6 +16,25 @@ app.use(express.static(path.join(__dirname, '../webapp')));
 // Пути к данным
 const productsPath = path.join(__dirname, '../data/products.json');
 const ordersPath = path.join(__dirname, '../data/orders.json');
+const bannersPath = path.join(__dirname, '../data/banners.json');
+
+// API для получения баннеров
+app.get('/api/banners', (req, res) => {
+  try {
+    if (!fs.existsSync(bannersPath)) {
+      return res.json([]);
+    }
+    const banners = JSON.parse(fs.readFileSync(bannersPath, 'utf-8'));
+    // Возвращаем только активные баннеры, отсортированные по order
+    const activeBanners = banners
+      .filter(b => b.enabled)
+      .sort((a, b) => a.order - b.order);
+    res.json(activeBanners);
+  } catch (error) {
+    console.error('Ошибка чтения баннеров:', error);
+    res.status(500).json({ error: 'Ошибка загрузки баннеров' });
+  }
+});
 
 // API для получения товаров
 app.get('/api/products', (req, res) => {
