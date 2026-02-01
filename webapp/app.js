@@ -63,6 +63,7 @@ function init() {
     loadPopularProducts();
     updateCartBadge();
     app.showPage('home');
+    animateProductCards();
 }
 
 // Load promo banners
@@ -155,6 +156,7 @@ app.showCatalog = function(region) {
     const products = app.products[region];
     const container = document.getElementById('catalog-products');
     container.innerHTML = products.map(product => createProductCard(product)).join('');
+    animateProductCards();
 };
 
 // Show product detail
@@ -496,4 +498,27 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
     init();
+}
+
+// Add scroll effect for navbar
+let lastScroll = 0;
+window.addEventListener('scroll', () => {
+    const navbar = document.querySelector('.navbar');
+    const currentScroll = window.pageYOffset;
+    
+    if (currentScroll > 50) {
+        navbar.classList.add('scrolled');
+    } else {
+        navbar.classList.remove('scrolled');
+    }
+    
+    lastScroll = currentScroll;
+});
+
+// Add loading animation to product cards
+function animateProductCards() {
+    const cards = document.querySelectorAll('.product-card, .region-card');
+    cards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+    });
 }
