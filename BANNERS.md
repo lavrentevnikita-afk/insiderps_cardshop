@@ -241,7 +241,7 @@ logAction('DELETE_BANNER', userId, { bannerId: 1, title: "Скидки" });
 4. Проверьте консоль браузера на ошибки
 
 ### Изменения не применяются
-1. Проверьте логи бота: `docker logs psshop-bot`
+1. Проверьте логи бота: `pm2 logs bot --lines 50`
 2. Убедитесь, что файл `data/banners.json` обновлен
 3. Проверьте API: `curl https://insiderplaystation.ru/api/banners`
 4. Синхронизируйте с GitHub вручную

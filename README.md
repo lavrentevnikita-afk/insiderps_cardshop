@@ -152,7 +152,7 @@ certbot --nginx -d yourdomain.com -d www.yourdomain.com
 
 - **[INSTALLATION.md](INSTALLATION.md)** - Полная инструкция по установке
 - **[ADMIN.md](ADMIN.md)** - Руководство администратора
-- **[DOCKER.md](DOCKER.md)** - Запуск через Docker
+- **[CHEATSHEET.md](CHEATSHEET.md)** - Шпаргалка админа
 - **[ROADMAP.md](ROADMAP.md)** - Планы развития
 
 ## 🎯 API Endpoints

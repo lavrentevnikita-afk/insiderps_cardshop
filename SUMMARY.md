@@ -424,7 +424,7 @@ GITHUB_REPO=lavrentevnikita-afk/insiderps_cardshop
 - [README.md](README.md) - Главная документация и quick start
 - [ADMIN.md](ADMIN.md) - Руководство администратора
 - [INSTALLATION.md](INSTALLATION.md) - Установка и деплой
-- [DOCKER.md](DOCKER.md) - Запуск через Docker
+- [CHEATSHEET.md](CHEATSHEET.md) - Шпаргалка администратора
 - [ROADMAP.md](ROADMAP.md) - Планы развития
 
 ---
