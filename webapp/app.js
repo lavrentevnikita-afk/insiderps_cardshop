@@ -336,7 +336,6 @@ function createProductCard(product) {
             <div class="product-image">
                 <img src="${imageUrl}" alt="${product.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/400x250/003087/00a8ff?text=PlayStation+Card'">
             </div>
-            </div>
             <div class="product-info">
                 <div class="product-title">
                     ${product.name}
@@ -403,9 +402,10 @@ app.showProduct = function(productId) {
     const originalPrice = product.discount > 0 ? Math.round(product.price / (1 - product.discount / 100)) : product.price;
     
     const imageUrl = product.image || 'https://via.placeholder.com/800x500/003087/00a8ff?text=PlayStation+Card';
+    const regionClass = `region-${product.region.toLowerCase()}`;
     
     container.innerHTML = `
-        <div class="product-detail-image">
+        <div class="product-detail-image ${regionClass}">
             <img src="${imageUrl}" alt="${product.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/800x500/003087/00a8ff?text=PlayStation+Card'">
         </div>
         <div class="product-detail-content">
@@ -515,8 +515,10 @@ function renderCart() {
     
     container.innerHTML = `
         <div class="cart-items">
-            ${app.cart.map(item => `
-                <div class="cart-item">
+            ${app.cart.map(item => {
+                const regionClass = `region-${item.region.toLowerCase()}`;
+                return `
+                <div class="cart-item ${regionClass}">
                     <div class="cart-item-image">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">
                             <path fill="currentColor" d="M25 2L2 13v24l23 11 23-11V13L25 2zm0 4.4l18.6 8.9v19.4L25 43.6 6.4 34.7V15.3L25 6.4z"/>
@@ -531,7 +533,8 @@ function renderCart() {
                         Удалить
                     </button>
                 </div>
-            `).join('')}
+                `;
+            }).join('')}
         </div>
         
         <div class="cart-payment">
