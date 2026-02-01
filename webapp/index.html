@@ -8,76 +8,100 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <div class="logo">
-                    <svg class="ps-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="40" height="40">
-                        <path fill="currentColor" d="M25 2L2 13v24l23 11 23-11V13L25 2zm0 4.4l18.6 8.9v19.4L25 43.6 6.4 34.7V15.3L25 6.4z"/>
-                        <path fill="currentColor" d="M25 15c-5.5 0-10 4.5-10 10s4.5 10 10 10 10-4.5 10-10-4.5-10-10-10zm0 16c-3.3 0-6-2.7-6-6s2.7-6 6-6 6 2.7 6 6-2.7 6-6 6z"/>
-                    </svg>
-                    <h1>PlayStation Cards</h1>
-                </div>
-                <p class="subtitle">Карты пополнения для всех регионов</p>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-content">
+            <div class="logo" onclick="app.showPage('home')">
+                <svg class="ps-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">
+                    <path fill="currentColor" d="M25 2L2 13v24l23 11 23-11V13L25 2zm0 4.4l18.6 8.9v19.4L25 43.6 6.4 34.7V15.3L25 6.4z"/>
+                </svg>
+                <span>BP</span>
             </div>
-        </header>
-
-        <!-- Regions Tabs -->
-        <div class="regions-tabs">
-            <button class="region-tab active" data-region="usa">
-                <span class="flag">🇺🇸</span>
-                <span>США</span>
-            </button>
-            <button class="region-tab" data-region="india">
-                <span class="flag">🇮🇳</span>
-                <span>Индия</span>
-            </button>
-            <button class="region-tab" data-region="poland">
-                <span class="flag">🇵🇱</span>
-                <span>Польша</span>
-            </button>
-            <button class="region-tab" data-region="turkey">
-                <span class="flag">🇹🇷</span>
-                <span>Турция</span>
-            </button>
-        </div>
-
-        <!-- Products Grid -->
-        <div class="products-container" id="products-container">
-            <!-- Products will be loaded dynamically -->
-        </div>
-
-        <!-- Features -->
-        <div class="features">
-            <div class="feature">
-                <div class="feature-icon">⚡</div>
-                <div class="feature-text">
-                    <h3>Моментальная выдача</h3>
-                    <p>Получите код сразу после оплаты</p>
-                </div>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">✅</div>
-                <div class="feature-text">
-                    <h3>Официальные карты</h3>
-                    <p>Только оригинальные коды Sony</p>
-                </div>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">🛡️</div>
-                <div class="feature-text">
-                    <h3>Гарантия качества</h3>
-                    <p>Поддержка 24/7 и возврат средств</p>
-                </div>
+            <div class="cart-icon" onclick="app.showPage('cart')">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M9 2L7 6H3L6 20H18L21 6H17L15 2H9Z" stroke-width="2"/>
+                    <circle cx="9" cy="21" r="1"/>
+                    <circle cx="17" cy="21" r="1"/>
+                </svg>
+                <span class="cart-badge" id="cart-badge">0</span>
             </div>
         </div>
+    </nav>
 
-        <!-- Footer -->
-        <footer class="footer">
-            <p>📢 Наш канал: <a href="https://t.me/insider_playstation" target="_blank">@insider_playstation</a></p>
-            <p>💬 Поддержка: <a href="https://t.me/insider_mngr" target="_blank">@insider_mngr</a></p>
-        </footer>
+    <!-- Main Container -->
+    <div class="app-container">
+        
+        <!-- HOME PAGE -->
+        <div id="page-home" class="page active">
+            <!-- Promo Banners -->
+            <div class="promo-slider" id="promo-slider">
+                <!-- Banners will be loaded here -->
+            </div>
+
+            <!-- Regions -->
+            <section class="section">
+                <h2 class="section-title">Сервисы</h2>
+                <div class="regions-grid">
+                    <div class="region-card" onclick="app.showCatalog('usa')">
+                        <div class="region-icon">🇺🇸</div>
+                        <span>PlayStation Америка</span>
+                    </div>
+                    <div class="region-card" onclick="app.showCatalog('india')">
+                        <div class="region-icon">🇮🇳</div>
+                        <span>PlayStation Индия</span>
+                    </div>
+                    <div class="region-card" onclick="app.showCatalog('poland')">
+                        <div class="region-icon">🇵🇱</div>
+                        <span>PlayStation Польша</span>
+                    </div>
+                    <div class="region-card" onclick="app.showCatalog('turkey')">
+                        <div class="region-icon">🇹🇷</div>
+                        <span>PlayStation Турция</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Popular Products -->
+            <section class="section">
+                <h2 class="section-title">Популярное</h2>
+                <div class="popular-grid" id="popular-products">
+                    <!-- Popular products will be loaded here -->
+                </div>
+            </section>
+        </div>
+
+        <!-- CATALOG PAGE -->
+        <div id="page-catalog" class="page">
+            <div class="page-header">
+                <button class="back-btn" onclick="app.showPage('home')">← Назад</button>
+                <h1 id="catalog-title">Каталог</h1>
+            </div>
+            <div class="products-grid" id="catalog-products">
+                <!-- Products will be loaded here -->
+            </div>
+        </div>
+
+        <!-- PRODUCT PAGE -->
+        <div id="page-product" class="page">
+            <div class="page-header">
+                <button class="back-btn" onclick="app.goBack()">← Назад</button>
+            </div>
+            <div class="product-detail" id="product-detail">
+                <!-- Product detail will be loaded here -->
+            </div>
+        </div>
+
+        <!-- CART PAGE -->
+        <div id="page-cart" class="page">
+            <div class="page-header">
+                <button class="back-btn" onclick="app.showPage('home')">← Назад</button>
+                <h1>Корзина</h1>
+            </div>
+            <div id="cart-content">
+                <!-- Cart content will be loaded here -->
+            </div>
+        </div>
+
     </div>
 
     <script src="app.js"></script>
