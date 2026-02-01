@@ -206,6 +206,7 @@ ${itemsListText}
       error: error.message
     };
   }
+}
 
 module.exports = {
   sendKeysEmail
