@@ -4,6 +4,10 @@ data/orders.json
 *.log
 .DS_Store
 
+# Minified files (generated on build)
+webapp/*.min.js
+webapp/*.min.css
+
 # Docker
 docker-compose.override.yml
 

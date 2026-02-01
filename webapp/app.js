@@ -11,6 +11,63 @@ if (isTelegramWebApp) {
     console.log('🌐 Запущено через браузер');
 }
 
+// ============================================
+// PRELOADER
+// ============================================
+
+// Hide preloader when page is loaded
+window.addEventListener('load', function() {
+    const preloader = document.getElementById('preloader');
+    if (preloader) {
+        setTimeout(() => {
+            preloader.classList.add('loaded');
+            // Remove from DOM after animation
+            setTimeout(() => {
+                preloader.remove();
+            }, 500);
+        }, 300); // Small delay for better UX
+    }
+});
+
+// ============================================
+// LAZY LOADING IMAGES
+// ============================================
+
+function initLazyLoading() {
+    const images = document.querySelectorAll('img[loading="lazy"]');
+    
+    if ('IntersectionObserver' in window) {
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.addEventListener('load', () => {
+                        img.classList.add('loaded');
+                    });
+                    if (img.complete) {
+                        img.classList.add('loaded');
+                    }
+                    observer.unobserve(img);
+                }
+            });
+        }, {
+            rootMargin: '50px' // Start loading 50px before image enters viewport
+        });
+        
+        images.forEach(img => imageObserver.observe(img));
+    } else {
+        // Fallback for browsers without IntersectionObserver
+        images.forEach(img => {
+            img.addEventListener('load', () => {
+                img.classList.add('loaded');
+            });
+            if (img.complete) {
+                img.classList.add('loaded');
+            }
+        });
+    }
+}
+
 // App State
 const app = {
     currentPage: 'home',
@@ -185,6 +242,9 @@ async function init() {
     app.showPage('home');
     animateProductCards();
     
+    // Initialize lazy loading for images
+    initLazyLoading();
+    
     // Periodic price check every 5 minutes
     setInterval(async () => {
         try {
@@ -256,7 +316,7 @@ function createProductCard(product) {
             ${discountTag}
             <div class="product-favorite">⭐</div>
             <div class="product-image">
-                <img src="${imageUrl}" alt="${product.name}" onerror="this.src='https://via.placeholder.com/400x250/003087/00a8ff?text=PlayStation+Card'">
+                <img src="${imageUrl}" alt="${product.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/400x250/003087/00a8ff?text=PlayStation+Card'">
             </div>
             <div class="product-info">
                 <div class="product-title">
@@ -309,6 +369,9 @@ function renderCatalog() {
     const container = document.getElementById('catalog-products');
     container.innerHTML = products.map(product => createProductCard(product)).join('');
     animateProductCards();
+    
+    // Re-initialize lazy loading for new images
+    initLazyLoading();
 }
 
 // Sort products
@@ -351,7 +414,7 @@ app.showProduct = function(productId) {
     
     container.innerHTML = `
         <div class="product-detail-image">
-            <img src="${imageUrl}" alt="${product.name}" onerror="this.src='https://via.placeholder.com/800x500/003087/00a8ff?text=PlayStation+Card'">
+            <img src="${imageUrl}" alt="${product.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/800x500/003087/00a8ff?text=PlayStation+Card'">
         </div>
         <div class="product-detail-content">
             <div class="product-detail-header">

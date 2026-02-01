@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node bot/index.js",
     "dev": "nodemon bot/index.js",
-    "server": "node server/index.js"
+    "server": "node server/index.js",
+    "minify:js": "terser webapp/app.js -o webapp/app.min.js -c -m",
+    "minify:css": "cleancss -o webapp/style.min.css webapp/style.css",
+    "minify": "npm run minify:js && npm run minify:css",
+    "build": "npm run minify"
   },
   "keywords": [
     "telegram",
@@ -18,13 +22,15 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "node-telegram-bot-api": "^0.66.0",
-    "express": "^4.18.2",
-    "dotenv": "^16.3.1",
     "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "node-telegram-bot-api": "^0.66.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "clean-css-cli": "^5.6.3",
+    "nodemon": "^3.0.2",
+    "terser": "^5.46.0"
   }
 }
