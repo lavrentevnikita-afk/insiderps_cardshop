@@ -87,6 +87,9 @@ app.post('/api/order', async (req, res) => {
       source: isTelegram ? 'Telegram' : 'Web'
     });
     
+    // Импортируем функцию уведомления
+    const { notifyAdminNewOrder } = require('../bot/adminHandlers');
+    
     // Получаем ключи для товаров
     const keysPath = path.join(__dirname, '../data/keys.json');
     const keys = JSON.parse(fs.readFileSync(keysPath, 'utf-8'));
@@ -138,6 +141,15 @@ app.post('/api/order', async (req, res) => {
     };
     orders.push(order);
     fs.writeFileSync(ordersPath, JSON.stringify(orders, null, 2));
+    
+    // Уведомляем админа о новом заказе
+    try {
+      const TelegramBot = require('node-telegram-bot-api');
+      const bot = new TelegramBot(process.env.BOT_TOKEN);
+      await notifyAdminNewOrder(bot, orderData);
+    } catch (error) {
+      console.error('Ошибка отправки уведомления админу:', error);
+    }
     
     if (isTelegram && orderData.telegram_user) {
       // Отправляем ключи в Telegram бот

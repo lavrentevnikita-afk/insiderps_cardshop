@@ -7,7 +7,10 @@ const {
     handleAdminCallback, 
     handleAddKeyCommand,
     handleSetPriceCommand,
-    handleSetDiscountCommand
+    handleSetDiscountCommand,
+    handleBulkPriceCommand,
+    handleBulkDiscountCommand,
+    handleResetDiscountsCommand
 } = require('./adminHandlers');
 
 // Проверка наличия токена
@@ -54,6 +57,15 @@ bot.onText(/\/setprice/, (msg) => handleSetPriceCommand(bot, msg));
 
 // Обработка команды /setdiscount
 bot.onText(/\/setdiscount/, (msg) => handleSetDiscountCommand(bot, msg));
+
+// Обработка команды /bulkprice
+bot.onText(/\/bulkprice/, (msg) => handleBulkPriceCommand(bot, msg));
+
+// Обработка команды /bulkdiscount
+bot.onText(/\/bulkdiscount/, (msg) => handleBulkDiscountCommand(bot, msg));
+
+// Обработка команды /resetdiscounts
+bot.onText(/\/resetdiscounts/, (msg) => handleResetDiscountsCommand(bot, msg));
 
 // Обработка callback кнопок
 bot.on('callback_query', async (query) => {

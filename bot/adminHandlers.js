@@ -47,6 +47,60 @@ async function syncToGitHub(message) {
     }
 }
 
+// Log admin actions
+function logAction(action, userId, details) {
+    try {
+        const logsPath = path.join(__dirname, '..', 'data', 'logs.json');
+        let logs = [];
+        
+        if (fs.existsSync(logsPath)) {
+            logs = JSON.parse(fs.readFileSync(logsPath, 'utf8'));
+        }
+        
+        logs.push({
+            timestamp: new Date().toISOString(),
+            action,
+            userId,
+            details
+        });
+        
+        // Храним только последние 500 записей
+        if (logs.length > 500) {
+            logs = logs.slice(-500);
+        }
+        
+        fs.writeFileSync(logsPath, JSON.stringify(logs, null, 2));
+    } catch (error) {
+        console.error('Ошибка записи лога:', error);
+    }
+}
+
+// Send notification to admin about new order
+async function notifyAdminNewOrder(bot, orderData) {
+    if (!ADMIN_ID) return;
+    
+    try {
+        let message = '🔔 *Новый заказ!*\n\n';
+        message += `📧 Email: ${orderData.email}\n`;
+        message += `💰 Сумма: ${orderData.total}₽\n\n`;
+        message += `📦 Товары:\n`;
+        
+        orderData.items.forEach((item, index) => {
+            message += `${index + 1}. ${item.name} x${item.quantity} - ${item.price * item.quantity}₽\n`;
+        });
+        
+        message += `\n🕒 ${new Date().toLocaleString('ru-RU')}`;
+        
+        if (orderData.telegram_user) {
+            message += `\n👤 Пользователь: @${orderData.telegram_user.username || orderData.telegram_user.first_name}`;
+        }
+        
+        await bot.sendMessage(ADMIN_ID, message, { parse_mode: 'Markdown' });
+    } catch (error) {
+        console.error('Ошибка отправки уведомления админу:', error);
+    }
+}
+
 // Middleware to check admin access
 function requireAdmin(bot, chatId, userId, callback) {
     if (!isAdmin(userId)) {
@@ -71,9 +125,14 @@ async function handleAdminCommand(bot, msg) {
                 ],
                 [
                     { text: '📊 Заказы', callback_data: 'admin_orders' },
-                    { text: '📢 Баннеры', callback_data: 'admin_banners' }
+                    { text: '� Статистика', callback_data: 'admin_stats' }
                 ],
                 [
+                    { text: '📢 Баннеры', callback_data: 'admin_banners' },
+                    { text: '📝 Шаблоны', callback_data: 'admin_templates' }
+                ],
+                [
+                    { text: '📋 Логи', callback_data: 'admin_logs' },
                     { text: '⚙️ Настройки', callback_data: 'admin_settings' }
                 ]
             ]
@@ -137,6 +196,9 @@ async function handleProductsAdmin(bot, chatId, userId, messageId = null) {
                 [
                     { text: '✏️ Редактировать', callback_data: 'admin_edit_product' },
                     { text: '🗑 Удалить', callback_data: 'admin_delete_product' }
+                ],
+                [
+                    { text: '📋 Массовые операции', callback_data: 'admin_bulk_operations' }
                 ],
                 [
                     { text: '« Назад', callback_data: 'admin_back' }
@@ -433,6 +495,9 @@ async function handleSetPriceCommand(bot, msg) {
         
         fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
         
+        // Логируем действие
+        logAction('SET_PRICE', userId, { productId, oldPrice, newPrice });
+        
         // Синхронизируем с GitHub
         const synced = await syncToGitHub(`Обновлена цена ${productId}: ${oldPrice}₽ → ${newPrice}₽`);
         const syncStatus = synced ? '\n\n🔄 Изменения синхронизированы с сайтом!' : '\n\n⚠️ Изменения сохранены локально';
@@ -482,6 +547,9 @@ async function handleSetDiscountCommand(bot, msg) {
         
         fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
         
+        // Логируем действие
+        logAction('SET_DISCOUNT', userId, { productId, oldDiscount, newDiscount });
+        
         // Синхронизируем с GitHub
         const synced = await syncToGitHub(`Обновлена скидка ${productId}: ${oldDiscount}% → ${newDiscount}%`);
         const syncStatus = synced ? '\n\n🔄 Изменения синхронизированы с сайтом!' : '\n\n⚠️ Изменения сохранены локально';
@@ -525,9 +593,14 @@ async function handleAdminCallback(bot, query) {
                     ],
                     [
                         { text: '📊 Заказы', callback_data: 'admin_orders' },
-                        { text: '📢 Баннеры', callback_data: 'admin_banners' }
+                        { text: '� Статистика', callback_data: 'admin_stats' }
                     ],
                     [
+                        { text: '📢 Баннеры', callback_data: 'admin_banners' },
+                        { text: '📝 Шаблоны', callback_data: 'admin_templates' }
+                    ],
+                    [
+                        { text: '📋 Логи', callback_data: 'admin_logs' },
                         { text: '⚙️ Настройки', callback_data: 'admin_settings' }
                     ]
                 ]
@@ -557,6 +630,18 @@ async function handleAdminCallback(bot, query) {
             break;
         case 'admin_settings':
             await handleSettingsAdmin(bot, chatId, userId, messageId);
+            break;
+        case 'admin_stats':
+            await handleStatsAdmin(bot, chatId, userId, messageId);
+            break;
+        case 'admin_templates':
+            await handleTemplatesAdmin(bot, chatId, userId, messageId);
+            break;
+        case 'admin_logs':
+            await handleLogsAdmin(bot, chatId, userId, messageId);
+            break;
+        case 'admin_bulk_operations':
+            await handleBulkOperations(bot, chatId, userId, messageId);
             break;
         case 'admin_add_keys':
             await handleAddKeys(bot, chatId, userId);
@@ -706,11 +791,417 @@ async function handleEditProductForm(bot, chatId, userId, productId, messageId =
     });
 }
 
+// Statistics handler
+async function handleStatsAdmin(bot, chatId, userId, messageId = null) {
+    requireAdmin(bot, chatId, userId, async () => {
+        const ordersPath = path.join(__dirname, '..', 'data', 'orders.json');
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        
+        let orders = [];
+        if (fs.existsSync(ordersPath)) {
+            orders = JSON.parse(fs.readFileSync(ordersPath, 'utf8'));
+        }
+        
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        
+        // Общая статистика
+        const totalRevenue = orders.reduce((sum, order) => sum + (order.total || 0), 0);
+        const avgOrder = orders.length > 0 ? Math.round(totalRevenue / orders.length) : 0;
+        
+        // Статистика за сегодня
+        const today = new Date();
+        const todayOrders = orders.filter(order => {
+            const orderDate = new Date(order.timestamp);
+            return orderDate.toDateString() === today.toDateString();
+        });
+        const todayRevenue = todayOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+        
+        // Статистика за неделю
+        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const weekOrders = orders.filter(order => new Date(order.timestamp) >= weekAgo);
+        const weekRevenue = weekOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+        
+        // Топ товаров
+        const productSales = {};
+        orders.forEach(order => {
+            order.items.forEach(item => {
+                if (!productSales[item.id]) {
+                    productSales[item.id] = {
+                        name: item.name,
+                        count: 0,
+                        revenue: 0
+                    };
+                }
+                productSales[item.id].count += item.quantity;
+                productSales[item.id].revenue += item.price * item.quantity;
+            });
+        });
+        
+        const topProducts = Object.entries(productSales)
+            .sort((a, b) => b[1].count - a[1].count)
+            .slice(0, 5);
+        
+        let message = '📈 *Статистика продаж*\n\n';
+        message += '💰 *Общая статистика:*\n';
+        message += `📦 Всего заказов: ${orders.length}\n`;
+        message += `💵 Общая выручка: ${totalRevenue}₽\n`;
+        message += `📊 Средний чек: ${avgOrder}₽\n\n`;
+        
+        message += '📅 *За сегодня:*\n';
+        message += `📦 Заказов: ${todayOrders.length}\n`;
+        message += `💵 Выручка: ${todayRevenue}₽\n\n`;
+        
+        message += '📊 *За неделю:*\n';
+        message += `📦 Заказов: ${weekOrders.length}\n`;
+        message += `💵 Выручка: ${weekRevenue}₽\n\n`;
+        
+        if (topProducts.length > 0) {
+            message += '🏆 *Топ товаров:*\n';
+            topProducts.forEach((item, index) => {
+                const [id, data] = item;
+                message += `${index + 1}. ${data.name}\n`;
+                message += `   Продано: ${data.count} шт. | ${data.revenue}₽\n`;
+            });
+        }
+        
+        const keyboard = {
+            inline_keyboard: [
+                [
+                    { text: '« Назад', callback_data: 'admin_back' }
+                ]
+            ]
+        };
+        
+        if (messageId) {
+            await bot.editMessageText(message, {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        } else {
+            await bot.sendMessage(chatId, message, {
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        }
+    });
+}
+
+// Templates handler
+async function handleTemplatesAdmin(bot, chatId, userId, messageId = null) {
+    requireAdmin(bot, chatId, userId, async () => {
+        const templates = {
+            'psn_card': {
+                name: 'PSN карта',
+                description: 'Карта пополнения PlayStation Store на {VALUE} для аккаунта региона {REGION}. Моментальная доставка после оплаты.'
+            },
+            'game_code': {
+                name: 'Код игры',
+                description: 'Цифровой код активации игры для PlayStation {CONSOLE}. Регион: {REGION}. Активация сразу после покупки.'
+            },
+            'subscription': {
+                name: 'Подписка',
+                description: 'Подписка PlayStation Plus на {DURATION}. Регион: {REGION}. Все преимущества PS Plus.'
+            }
+        };
+        
+        let message = '📝 *Шаблоны описаний*\n\n';
+        message += 'Доступные шаблоны для быстрого создания товаров:\n\n';
+        
+        Object.keys(templates).forEach(key => {
+            const template = templates[key];
+            message += `*${template.name}* (\`${key}\`)\n`;
+            message += `${template.description}\n\n`;
+        });
+        
+        message += 'Используйте команду:\n';
+        message += '`/usetemplate TEMPLATE_ID`\n\n';
+        message += 'Переменные:\n';
+        message += '`{VALUE}` - номинал\n';
+        message += '`{REGION}` - регион\n';
+        message += '`{CONSOLE}` - консоль\n';
+        message += '`{DURATION}` - длительность';
+        
+        const keyboard = {
+            inline_keyboard: [
+                [
+                    { text: '« Назад', callback_data: 'admin_back' }
+                ]
+            ]
+        };
+        
+        if (messageId) {
+            await bot.editMessageText(message, {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        } else {
+            await bot.sendMessage(chatId, message, {
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        }
+    });
+}
+
+// Logs handler
+async function handleLogsAdmin(bot, chatId, userId, messageId = null) {
+    requireAdmin(bot, chatId, userId, async () => {
+        const logsPath = path.join(__dirname, '..', 'data', 'logs.json');
+        let logs = [];
+        
+        if (fs.existsSync(logsPath)) {
+            logs = JSON.parse(fs.readFileSync(logsPath, 'utf8'));
+        }
+        
+        let message = '📋 *Логи действий администратора*\n\n';
+        
+        if (logs.length === 0) {
+            message += 'Логи пусты\n';
+        } else {
+            // Последние 10 действий
+            const recentLogs = logs.slice(-10).reverse();
+            
+            recentLogs.forEach(log => {
+                const date = new Date(log.timestamp).toLocaleString('ru-RU');
+                message += `🕒 ${date}\n`;
+                message += `👤 Админ: ${log.userId}\n`;
+                message += `🔧 Действие: ${log.action}\n`;
+                
+                if (log.details) {
+                    if (log.details.productId) message += `📦 Товар: ${log.details.productId}\n`;
+                    if (log.details.oldPrice !== undefined) message += `💰 ${log.details.oldPrice}₽ → ${log.details.newPrice}₽\n`;
+                    if (log.details.oldDiscount !== undefined) message += `🏷 ${log.details.oldDiscount}% → ${log.details.newDiscount}%\n`;
+                }
+                
+                message += '\n';
+            });
+            
+            message += `\nВсего записей: ${logs.length}`;
+        }
+        
+        const keyboard = {
+            inline_keyboard: [
+                [
+                    { text: '🗑 Очистить логи', callback_data: 'admin_clear_logs' }
+                ],
+                [
+                    { text: '« Назад', callback_data: 'admin_back' }
+                ]
+            ]
+        };
+        
+        if (messageId) {
+            await bot.editMessageText(message, {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        } else {
+            await bot.sendMessage(chatId, message, {
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        }
+    });
+}
+
+// Bulk operations handler
+async function handleBulkOperations(bot, chatId, userId, messageId = null) {
+    requireAdmin(bot, chatId, userId, async () => {
+        let message = '📋 *Массовые операции*\n\n';
+        message += 'Доступные операции:\n\n';
+        message += '1️⃣ *Массовое изменение цен*\n';
+        message += 'Команда: `/bulkprice REGION MULTIPLIER`\n';
+        message += 'Пример: `/bulkprice USA 1.1` (цены +10%)\n\n';
+        
+        message += '2️⃣ *Массовая скидка*\n';
+        message += 'Команда: `/bulkdiscount REGION DISCOUNT`\n';
+        message += 'Пример: `/bulkdiscount India 15` (скидка 15%)\n\n';
+        
+        message += '3️⃣ *Сброс всех скидок*\n';
+        message += 'Команда: `/resetdiscounts`\n\n';
+        
+        message += 'Регионы: `USA`, `India`, `Poland`, `Turkey` или `ALL`';
+        
+        const keyboard = {
+            inline_keyboard: [
+                [
+                    { text: '« Назад', callback_data: 'admin_products' }
+                ]
+            ]
+        };
+        
+        if (messageId) {
+            await bot.editMessageText(message, {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        } else {
+            await bot.sendMessage(chatId, message, {
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        }
+    });
+}
+
+// Bulk price change
+async function handleBulkPriceCommand(bot, msg) {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    
+    requireAdmin(bot, chatId, userId, async () => {
+        const parts = msg.text.split(' ');
+        
+        if (parts.length < 3) {
+            bot.sendMessage(chatId, '❌ Формат: /bulkprice REGION MULTIPLIER\nПример: /bulkprice USA 1.1');
+            return;
+        }
+        
+        const region = parts[1].toUpperCase();
+        const multiplier = parseFloat(parts[2]);
+        
+        if (isNaN(multiplier) || multiplier <= 0) {
+            bot.sendMessage(chatId, '❌ Множитель должен быть положительным числом');
+            return;
+        }
+        
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        
+        let updatedCount = 0;
+        products.forEach(product => {
+            if (region === 'ALL' || product.region === region) {
+                product.price = Math.round(product.price * multiplier);
+                updatedCount++;
+            }
+        });
+        
+        if (updatedCount === 0) {
+            bot.sendMessage(chatId, '❌ Товары для указанного региона не найдены');
+            return;
+        }
+        
+        fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
+        
+        // Логируем действие
+        logAction('BULK_PRICE', userId, { region, multiplier, count: updatedCount });
+        
+        // Синхронизируем с GitHub
+        const change = multiplier > 1 ? `+${Math.round((multiplier - 1) * 100)}%` : `-${Math.round((1 - multiplier) * 100)}%`;
+        await syncToGitHub(`Массовое изменение цен ${region}: ${change}`);
+        
+        bot.sendMessage(chatId, 
+            `✅ Цены обновлены!\n\n` +
+            `🌍 Регион: ${region}\n` +
+            `📊 Изменение: ${change}\n` +
+            `📦 Обновлено товаров: ${updatedCount}\n\n` +
+            `🔄 Изменения синхронизированы с сайтом!`
+        );
+    });
+}
+
+// Bulk discount change
+async function handleBulkDiscountCommand(bot, msg) {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    
+    requireAdmin(bot, chatId, userId, async () => {
+        const parts = msg.text.split(' ');
+        
+        if (parts.length < 3) {
+            bot.sendMessage(chatId, '❌ Формат: /bulkdiscount REGION DISCOUNT\nПример: /bulkdiscount India 15');
+            return;
+        }
+        
+        const region = parts[1].toUpperCase();
+        const discount = parseInt(parts[2]);
+        
+        if (isNaN(discount) || discount < 0 || discount > 100) {
+            bot.sendMessage(chatId, '❌ Скидка должна быть от 0 до 100');
+            return;
+        }
+        
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        
+        let updatedCount = 0;
+        products.forEach(product => {
+            if (region === 'ALL' || product.region === region) {
+                product.discount = discount;
+                updatedCount++;
+            }
+        });
+        
+        if (updatedCount === 0) {
+            bot.sendMessage(chatId, '❌ Товары для указанного региона не найдены');
+            return;
+        }
+        
+        fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
+        
+        // Логируем действие
+        logAction('BULK_DISCOUNT', userId, { region, discount, count: updatedCount });
+        
+        // Синхронизируем с GitHub
+        await syncToGitHub(`Массовая установка скидок ${region}: ${discount}%`);
+        
+        bot.sendMessage(chatId, 
+            `✅ Скидки обновлены!\n\n` +
+            `🌍 Регион: ${region}\n` +
+            `🏷 Скидка: ${discount}%\n` +
+            `📦 Обновлено товаров: ${updatedCount}\n\n` +
+            `🔄 Изменения синхронизированы с сайтом!`
+        );
+    });
+}
+
+// Reset all discounts
+async function handleResetDiscountsCommand(bot, msg) {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    
+    requireAdmin(bot, chatId, userId, async () => {
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        
+        products.forEach(product => {
+            product.discount = 0;
+        });
+        
+        fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
+        
+        // Логируем действие
+        logAction('RESET_DISCOUNTS', userId, { count: products.length });
+        
+        // Синхронизируем с GitHub
+        await syncToGitHub('Сброс всех скидок');
+        
+        bot.sendMessage(chatId, 
+            `✅ Все скидки сброшены!\n\n` +
+            `📦 Обновлено товаров: ${products.length}\n\n` +
+            `🔄 Изменения синхронизированы с сайтом!`
+        );
+    });
+}
+
 module.exports = {
     handleAdminCommand,
     handleAdminCallback,
     handleAddKeyCommand,
     handleSetPriceCommand,
     handleSetDiscountCommand,
-    isAdmin
+    handleBulkPriceCommand,
+    handleBulkDiscountCommand,
+    handleResetDiscountsCommand,
+    isAdmin,
+    notifyAdminNewOrder,
+    logAction
 };
