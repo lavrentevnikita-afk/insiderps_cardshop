@@ -12,6 +12,19 @@ if (!process.env.BOT_TOKEN) {
 // Создаем бота
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
+// Устанавливаем Menu Button для быстрого доступа к магазину
+bot.setChatMenuButton({
+  menu_button: {
+    type: 'web_app',
+    text: '🛍 Магазин',
+    web_app: { url: process.env.WEBAPP_URL }
+  }
+}).then(() => {
+  console.log('✅ Menu Button установлена');
+}).catch(err => {
+  console.error('❌ Ошибка установки Menu Button:', err.message);
+});
+
 console.log('🤖 Бот запущен!');
 
 // Обработка команды /start
@@ -32,16 +45,40 @@ bot.on('pre_checkout_query', (query) => handlePreCheckoutQuery(bot, query));
 // Обработка успешной оплаты
 bot.on('successful_payment', (msg) => handleSuccessfulPayment(bot, msg));
 
-// Обработка Web App Data (для attachment menu)
+// Обработка Web App Data (для keyboard button mini apps)
 bot.on('web_app_data', (msg) => {
   const chatId = msg.chat.id;
-  const data = JSON.parse(msg.web_app_data.data);
   
-  console.log('📱 Web App Data получена:', data);
-  
-  // Обработка данных из webapp (например, заказ)
-  if (data.type === 'order') {
-    bot.sendMessage(chatId, `✅ Заказ получен!\n\nТовар: ${data.product}\nЦена: ${data.price}₽`);
+  try {
+    const data = JSON.parse(msg.web_app_data.data);
+    console.log('📱 Web App Data получена:', data);
+    
+    // Обработка данных из webapp
+    if (data.type === 'order') {
+      const itemsList = data.items.map(item => 
+        `• ${item.name} x${item.quantity} - ${item.price * item.quantity}₽`
+      ).join('\n');
+      
+      const orderMessage = `
+✅ *Заказ получен!*
+
+📦 *Товары:*
+${itemsList}
+
+💰 *Итого:* ${data.total}₽
+📧 *Email:* ${data.email}
+
+⏳ Ожидайте подтверждение оплаты...
+      `.trim();
+      
+      bot.sendMessage(chatId, orderMessage, { parse_mode: 'Markdown' });
+      
+      // Здесь будет интеграция с ЮКасса
+      console.log('💳 Создание платежа для заказа:', data);
+    }
+  } catch (error) {
+    console.error('❌ Ошибка обработки web_app_data:', error);
+    bot.sendMessage(chatId, '❌ Ошибка обработки заказа. Попробуйте снова.');
   }
 });
 

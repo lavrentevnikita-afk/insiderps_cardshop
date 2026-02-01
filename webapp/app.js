@@ -353,8 +353,31 @@ window.checkout = function() {
         return;
     }
     
-    // Here will be payment integration with YooKassa
-    tg.showAlert('Переход к оплате через ЮКасса будет добавлен позже');
+    // Подготовка данных заказа
+    const orderData = {
+        type: 'order',
+        email: email,
+        items: app.cart.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity
+        })),
+        total: app.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    };
+    
+    // Проверяем доступность метода sendData
+    if (tg.sendData) {
+        // Для Keyboard Button Mini Apps - отправляем данные и закрываем
+        tg.sendData(JSON.stringify(orderData));
+    } else {
+        // Для Inline Button Mini Apps - показываем сообщение
+        // В будущем здесь будет интеграция с ЮКасса
+        tg.showAlert('Заказ оформлен! Скоро добавим оплату через ЮКасса.');
+        
+        // Можно использовать answerWebAppQuery через бэкенд
+        console.log('Order data:', orderData);
+    }
 };
 
 // Helper functions
