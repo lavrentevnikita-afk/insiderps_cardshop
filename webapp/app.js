@@ -74,7 +74,6 @@ const app = {
     currentRegion: null,
     currentProduct: null,
     previousPage: null,
-    currentSort: 'default',
     cart: JSON.parse(localStorage.getItem('cart') || '[]'),
     products: {
         usa: [],
@@ -365,7 +364,6 @@ app.showPage = function(pageId) {
 // Show catalog for region
 app.showCatalog = function(region) {
     app.currentRegion = region;
-    app.currentSort = 'default';
     app.showPage('catalog');
     
     const regionNames = {
@@ -376,45 +374,19 @@ app.showCatalog = function(region) {
     };
     
     document.getElementById('catalog-title').textContent = regionNames[region];
-    document.getElementById('sort-select').value = 'default';
     
     renderCatalog();
 };
 
 // Render catalog with current sort
 function renderCatalog() {
-    const products = getSortedProducts(app.products[app.currentRegion]);
+    const products = app.products[app.currentRegion];
     const container = document.getElementById('catalog-products');
     container.innerHTML = products.map(product => createProductCard(product)).join('');
     animateProductCards();
     
     // Re-initialize lazy loading for new images
     initLazyLoading();
-}
-
-// Sort products
-app.sortProducts = function(sortType) {
-    app.currentSort = sortType;
-    renderCatalog();
-};
-
-// Get sorted products
-function getSortedProducts(products) {
-    const sorted = [...products];
-    
-    switch(app.currentSort) {
-        case 'price-asc':
-            return sorted.sort((a, b) => a.price - b.price);
-        case 'price-desc':
-            return sorted.sort((a, b) => b.price - a.price);
-        case 'discount':
-            return sorted.sort((a, b) => b.discount - a.discount);
-        case 'popular':
-            // Mock popularity by price (higher price = more popular for demo)
-            return sorted.sort((a, b) => b.price - a.price);
-        default:
-            return sorted;
-    }
 }
 
 // Show product detail
