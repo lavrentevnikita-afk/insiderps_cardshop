@@ -1,0 +1,26 @@
+[
+  {
+    "id": "product_1",
+    "name": "Базовая подписка",
+    "description": "Доступ на 30 дней ко всем функциям",
+    "price": 299,
+    "currency": "RUB",
+    "image": "https://via.placeholder.com/300x200?text=Basic"
+  },
+  {
+    "id": "product_2",
+    "name": "Премиум подписка",
+    "description": "Доступ на 90 дней + бонусы",
+    "price": 799,
+    "currency": "RUB",
+    "image": "https://via.placeholder.com/300x200?text=Premium"
+  },
+  {
+    "id": "product_3",
+    "name": "VIP подписка",
+    "description": "Доступ на 365 дней + все бонусы",
+    "price": 2499,
+    "currency": "RUB",
+    "image": "https://via.placeholder.com/300x200?text=VIP"
+  }
+]

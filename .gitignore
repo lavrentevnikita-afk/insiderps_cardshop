@@ -1,0 +1,15 @@
+node_modules/
+.env
+data/orders.json
+*.log
+.DS_Store
+
+# Docker
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db

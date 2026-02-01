@@ -1,0 +1,14 @@
+{
+  "product_1": [
+    "BASIC-2024-XXXX-0001",
+    "BASIC-2024-XXXX-0002",
+    "BASIC-2024-XXXX-0003"
+  ],
+  "product_2": [
+    "PREMIUM-2024-YYYY-0001",
+    "PREMIUM-2024-YYYY-0002"
+  ],
+  "product_3": [
+    "VIP-2024-ZZZZ-0001"
+  ]
+}
