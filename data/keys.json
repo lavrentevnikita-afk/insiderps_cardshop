@@ -1,14 +1,51 @@
 {
-  "product_1": [
-    "BASIC-2024-XXXX-0001",
-    "BASIC-2024-XXXX-0002",
-    "BASIC-2024-XXXX-0003"
+  "us_5": [
+    "USA5-XXXX-YYYY-0001",
+    "USA5-XXXX-YYYY-0002",
+    "USA5-XXXX-YYYY-0003"
   ],
-  "product_2": [
-    "PREMIUM-2024-YYYY-0001",
-    "PREMIUM-2024-YYYY-0002"
+  "us_10": [
+    "USA10-XXXX-YYYY-0001",
+    "USA10-XXXX-YYYY-0002",
+    "USA10-XXXX-YYYY-0003"
   ],
-  "product_3": [
-    "VIP-2024-ZZZZ-0001"
+  "us_25": [
+    "USA25-XXXX-YYYY-0001",
+    "USA25-XXXX-YYYY-0002"
+  ],
+  "us_50": [
+    "USA50-XXXX-YYYY-0001",
+    "USA50-XXXX-YYYY-0002"
+  ],
+  "in_500": [
+    "IN500-XXXX-YYYY-0001",
+    "IN500-XXXX-YYYY-0002"
+  ],
+  "in_1000": [
+    "IN1K-XXXX-YYYY-0001",
+    "IN1K-XXXX-YYYY-0002"
+  ],
+  "in_2000": [
+    "IN2K-XXXX-YYYY-0001"
+  ],
+  "pl_50": [
+    "PL50-XXXX-YYYY-0001",
+    "PL50-XXXX-YYYY-0002"
+  ],
+  "pl_100": [
+    "PL100-XXXX-YYYY-0001"
+  ],
+  "pl_250": [
+    "PL250-XXXX-YYYY-0001"
+  ],
+  "tr_50": [
+    "TR50-XXXX-YYYY-0001",
+    "TR50-XXXX-YYYY-0002"
+  ],
+  "tr_100": [
+    "TR100-XXXX-YYYY-0001"
+  ],
+  "tr_250": [
+    "TR250-XXXX-YYYY-0001"
   ]
 }

@@ -1,7 +1,15 @@
 // Initialize Telegram WebApp
-const tg = window.Telegram.WebApp;
-tg.expand();
-tg.enableClosingConfirmation();
+const tg = window.Telegram?.WebApp || { initDataUnsafe: {} };
+const isTelegramWebApp = !!window.Telegram?.WebApp?.initData;
+
+// Настройка WebApp если запущен из Telegram
+if (isTelegramWebApp) {
+    tg.expand();
+    tg.enableClosingConfirmation();
+    console.log('✅ Запущено из Telegram WebApp');
+} else {
+    console.log('🌐 Запущено через браузер');
+}
 
 // App State
 const app = {
@@ -345,11 +353,15 @@ window.selectPaymentMethod = function(element) {
 };
 
 // Checkout
-window.checkout = function() {
+window.checkout = async function() {
     const email = document.getElementById('email')?.value;
     
     if (!email || !email.includes('@')) {
-        tg.showAlert('Пожалуйста, введите корректный E-mail');
+        if (tg.showAlert) {
+            tg.showAlert('Пожалуйста, введите корректный E-mail');
+        } else {
+            alert('Пожалуйста, введите корректный E-mail');
+        }
         return;
     }
     
@@ -361,22 +373,92 @@ window.checkout = function() {
             id: item.id,
             name: item.name,
             price: item.price,
-            quantity: item.quantity
+            quantity: item.quantity,
+            currency: item.currency
         })),
-        total: app.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+        total: app.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+        timestamp: new Date().toISOString()
     };
     
-    // Проверяем доступность метода sendData
-    if (tg.sendData) {
-        // Для Keyboard Button Mini Apps - отправляем данные и закрываем
-        tg.sendData(JSON.stringify(orderData));
-    } else {
-        // Для Inline Button Mini Apps - показываем сообщение
-        // В будущем здесь будет интеграция с ЮКасса
-        tg.showAlert('Заказ оформлен! Скоро добавим оплату через ЮКасса.');
+    if (isTelegramWebApp) {
+        // Запущено из Telegram - отправляем в бот
+        console.log('📱 Отправка заказа в Telegram бот');
         
-        // Можно использовать answerWebAppQuery через бэкенд
-        console.log('Order data:', orderData);
+        // Добавляем данные пользователя Telegram
+        orderData.telegram_user = {
+            id: tg.initDataUnsafe.user?.id,
+            first_name: tg.initDataUnsafe.user?.first_name,
+            username: tg.initDataUnsafe.user?.username
+        };
+        
+        try {
+            // Отправляем через API бэкенда
+            const response = await fetch('/api/order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Telegram-Init-Data': tg.initData || ''
+                },
+                body: JSON.stringify(orderData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                if (tg.showAlert) {
+                    tg.showAlert('✅ Заказ оформлен! Коды отправлены в бот.');
+                }
+                // Очищаем корзину
+                app.cart = [];
+                saveCart();
+                updateCartBadge();
+                app.showPage('home');
+                
+                // Закрываем WebApp через 2 секунды
+                setTimeout(() => {
+                    if (tg.close) tg.close();
+                }, 2000);
+            } else {
+                throw new Error(result.error || 'Ошибка создания заказа');
+            }
+        } catch (error) {
+            console.error('❌ Ошибка отправки заказа:', error);
+            if (tg.showAlert) {
+                tg.showAlert('❌ Ошибка оформления заказа. Попробуйте снова.');
+            } else {
+                alert('❌ Ошибка оформления заказа. Попробуйте снова.');
+            }
+        }
+    } else {
+        // Запущено через браузер - отправляем на email
+        console.log('📧 Отправка заказа на email');
+        
+        try {
+            const response = await fetch('/api/order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(orderData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert(`✅ Заказ оформлен!\n\nКоды отправлены на: ${email}\n\nПроверьте почту через несколько минут.`);
+                
+                // Очищаем корзину
+                app.cart = [];
+                saveCart();
+                updateCartBadge();
+                app.showPage('home');
+            } else {
+                throw new Error(result.error || 'Ошибка создания заказа');
+            }
+        } catch (error) {
+            console.error('❌ Ошибка отправки заказа:', error);
+            alert('❌ Ошибка оформления заказа. Попробуйте снова.');
+        }
     }
 };
 
