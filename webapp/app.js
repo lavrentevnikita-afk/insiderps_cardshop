@@ -405,31 +405,54 @@ app.showProduct = function(productId) {
     const regionClass = `region-${product.region.toLowerCase()}`;
     
     container.innerHTML = `
-        <div class="product-detail-image ${regionClass}">
-            <img src="${imageUrl}" alt="${product.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/800x500/003087/00a8ff?text=PlayStation+Card'">
-        </div>
-        <div class="product-detail-content">
-            <div class="product-detail-header">
-                <div>
-                    <div class="product-detail-title">
-                        ${product.name}
-                        <span class="product-currency">${product.currency}</span>
+        <div class="product-detail-card">
+            <div class="product-detail-image ${regionClass}">
+                <img src="${imageUrl}" alt="${product.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/800x500/003087/00a8ff?text=PlayStation+Card'">
+            </div>
+            
+            <div class="product-detail-info">
+                <div class="product-detail-badges">
+                    <span class="product-region-badge">${product.region}</span>
+                    <span class="product-currency-badge">${product.currency}</span>
+                    ${product.discount > 0 ? `<span class="product-discount-badge">-${product.discount}%</span>` : ''}
+                </div>
+                
+                <h1 class="product-detail-title">${product.name}</h1>
+                
+                <div class="product-detail-price-block">
+                    <div class="product-detail-price-current">${product.price}₽</div>
+                    ${product.discount > 0 ? `<div class="product-detail-price-old">${originalPrice}₽</div>` : ''}
+                </div>
+                
+                <div class="product-detail-description">
+                    <h3>Описание</h3>
+                    <p>${product.description}</p>
+                </div>
+                
+                <div class="product-detail-features">
+                    <div class="feature-item">
+                        <span class="feature-icon">⚡</span>
+                        <span class="feature-text">Моментальная доставка</span>
                     </div>
-                    <p class="product-description">${product.description}</p>
-                </div>
-                <div class="product-detail-price">
-                    ${product.price}₽
-                    ${product.discount > 0 ? `<div style="font-size: 18px; color: var(--text-secondary); text-decoration: line-through;">${originalPrice}₽</div>` : ''}
+                    <div class="feature-item">
+                        <span class="feature-icon">✅</span>
+                        <span class="feature-text">Гарантия подлинности</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">💬</span>
+                        <span class="feature-text">Поддержка 24/7</span>
+                    </div>
                 </div>
             </div>
-            <div class="product-actions">
-                <button class="btn btn-secondary" onclick="app.addToCart('${product.id}')">
-                    В корзину
-                </button>
-                <button class="btn btn-primary" onclick="app.buyNow('${product.id}')">
-                    Купить сейчас
-                </button>
-            </div>
+        </div>
+        
+        <div class="product-detail-actions">
+            <button class="btn btn-primary btn-large" onclick="app.buyNow('${product.id}')">
+                <span>Купить за ${product.price}₽</span>
+            </button>
+            <button class="btn btn-secondary btn-large" onclick="app.addToCart('${product.id}')">
+                <span>В корзину</span>
+            </button>
         </div>
     `;
 };
@@ -968,25 +991,47 @@ function createOrderCard(order) {
     const statusText = status === 'completed' ? 'Выполнен' : 'В обработке';
     
     return `
-        <div class="order-item">
-            <div class="order-header">
-                <div>
-                    <div class="order-id">Заказ #${order.id || order.timestamp}</div>
-                    <div class="order-date">${date}</div>
+        <div class="order-card">
+            <div class="order-card-header">
+                <div class="order-card-info">
+                    <div class="order-card-id">№ ${order.id ? order.id.split('_')[1] : 'N/A'}</div>
+                    <div class="order-card-date">${date}</div>
                 </div>
-                <div class="order-status ${status}">${statusText}</div>
+                <div class="order-card-status ${status}">
+                    <span class="status-dot"></span>
+                    ${statusText}
+                </div>
             </div>
-            <div class="order-products">
+            
+            <div class="order-card-items">
                 ${order.items.map(item => `
-                    <div class="order-product">
-                        <span class="order-product-name">${item.name} x${item.quantity}</span>
-                        <span class="order-product-price">${item.price * item.quantity}₽</span>
+                    <div class="order-card-item">
+                        <div class="order-item-info">
+                            <span class="order-item-name">${item.name}</span>
+                            <span class="order-item-qty">×${item.quantity}</span>
+                        </div>
+                        <span class="order-item-price">${item.price * item.quantity}₽</span>
                     </div>
                 `).join('')}
             </div>
-            <div class="order-total">
-                <span class="order-total-label">Итого:</span>
-                <span class="order-total-amount">${order.total}₽</span>
+            
+            ${order.keys && order.keys.length > 0 ? `
+                <div class="order-card-keys">
+                    <div class="order-keys-header">
+                        <span>🔑 Ваши коды</span>
+                    </div>
+                    ${order.keys.map(keyItem => `
+                        <div class="order-key-item">
+                            <span class="order-key-product">${keyItem.product}</span>
+                            <code class="order-key-code">${keyItem.key}</code>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+            
+            <div class="order-card-footer">
+                <span class="order-footer-label">Итого</span>
+                <span class="order-footer-total">${order.total}₽</span>
             </div>
         </div>
     `;
