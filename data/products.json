@@ -4,8 +4,8 @@
     "name": "5$ (Америка)",
     "region": "USA",
     "currency": "USD",
-    "price": 465,
-    "discount": 0,
+    "price": 500,
+    "discount": 90,
     "description": "Карта пополнения PlayStation Store на 5$ для аккаунта региона США. Моментальная доставка после оплаты.",
     "image": "https://i.imgur.com/pscard5.png"
   },
@@ -64,7 +64,7 @@
     "name": "2000₹ (Индия)",
     "region": "India",
     "currency": "INR",
-    "price": 9999,
+    "price": 5000,
     "discount": 99,
     "description": "Карта пополнения PlayStation Store на 2000₹ для аккаунта региона Индия. Моментальная доставка после оплаты.",
     "image": "https://i.imgur.com/pscard_in2000.png"
@@ -124,7 +124,7 @@
     "name": "250₺ (Турция)",
     "region": "Turkey",
     "currency": "TRY",
-    "price": 1150,
+    "price": 9999,
     "discount": 14,
     "description": "Карта пополнения PlayStation Store на 250₺ для аккаунта региона Турция. Моментальная доставка после оплаты.",
     "image": "https://i.imgur.com/pscard_tr250.png"

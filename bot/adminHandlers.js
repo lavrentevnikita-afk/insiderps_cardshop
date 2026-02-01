@@ -19,8 +19,19 @@ function isAdmin(userId) {
 // Auto-commit and push changes to GitHub
 async function syncToGitHub(message) {
     try {
+        const githubToken = process.env.GITHUB_TOKEN;
+        const githubRepo = process.env.GITHUB_REPO || 'lavrentevnikita-afk/insiderps_cardshop';
+        
+        if (!githubToken) {
+            console.error('⚠️ GITHUB_TOKEN не установлен в .env');
+            return false;
+        }
+        
+        // Настройка remote URL с токеном
+        const remoteUrl = `https://${githubToken}@github.com/${githubRepo}.git`;
+        
         const { stdout, stderr } = await execPromise(
-            'cd /app && git add data/products.json && git commit -m "' + message + '" && git push',
+            `cd /app && git remote set-url origin "${remoteUrl}" && git add data/products.json && git commit -m "${message}" && git push`,
             { cwd: '/app' }
         );
         console.log('✅ Изменения запушены в GitHub:', message);
@@ -79,7 +90,7 @@ async function handleAdminCommand(bot, msg) {
 }
 
 // Products management
-async function handleProductsAdmin(bot, chatId, userId) {
+async function handleProductsAdmin(bot, chatId, userId, messageId = null) {
     requireAdmin(bot, chatId, userId, async () => {
         const productsPath = path.join(__dirname, '..', 'data', 'products.json');
         const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
@@ -133,15 +144,24 @@ async function handleProductsAdmin(bot, chatId, userId) {
             ]
         };
         
-        await bot.sendMessage(chatId, message, {
-            parse_mode: 'Markdown',
-            reply_markup: keyboard
-        });
+        if (messageId) {
+            await bot.editMessageText(message, {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        } else {
+            await bot.sendMessage(chatId, message, {
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        }
     });
 }
 
 // Keys management
-async function handleKeysAdmin(bot, chatId, userId) {
+async function handleKeysAdmin(bot, chatId, userId, messageId = null) {
     requireAdmin(bot, chatId, userId, async () => {
         const keysPath = path.join(__dirname, '..', 'data', 'keys.json');
         const keys = JSON.parse(fs.readFileSync(keysPath, 'utf8'));
@@ -174,15 +194,24 @@ async function handleKeysAdmin(bot, chatId, userId) {
             ]
         };
         
-        await bot.sendMessage(chatId, message, {
-            parse_mode: 'Markdown',
-            reply_markup: keyboard
-        });
+        if (messageId) {
+            await bot.editMessageText(message, {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        } else {
+            await bot.sendMessage(chatId, message, {
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        }
     });
 }
 
 // Orders management
-async function handleOrdersAdmin(bot, chatId, userId) {
+async function handleOrdersAdmin(bot, chatId, userId, messageId = null) {
     requireAdmin(bot, chatId, userId, async () => {
         const ordersPath = path.join(__dirname, '..', 'data', 'orders.json');
         let orders = [];
@@ -230,15 +259,24 @@ async function handleOrdersAdmin(bot, chatId, userId) {
             ]
         };
         
-        await bot.sendMessage(chatId, message, {
-            parse_mode: 'Markdown',
-            reply_markup: keyboard
-        });
+        if (messageId) {
+            await bot.editMessageText(message, {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        } else {
+            await bot.sendMessage(chatId, message, {
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        }
     });
 }
 
 // Banners management
-async function handleBannersAdmin(bot, chatId, userId) {
+async function handleBannersAdmin(bot, chatId, userId, messageId = null) {
     requireAdmin(bot, chatId, userId, async () => {
         const message = '📢 *Управление баннерами*\n\n' +
                        'Здесь вы можете управлять промо-баннерами в приложении.\n\n' +
@@ -252,15 +290,24 @@ async function handleBannersAdmin(bot, chatId, userId) {
             ]
         };
         
-        await bot.sendMessage(chatId, message, {
-            parse_mode: 'Markdown',
-            reply_markup: keyboard
-        });
+        if (messageId) {
+            await bot.editMessageText(message, {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        } else {
+            await bot.sendMessage(chatId, message, {
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        }
     });
 }
 
 // Settings
-async function handleSettingsAdmin(bot, chatId, userId) {
+async function handleSettingsAdmin(bot, chatId, userId, messageId = null) {
     requireAdmin(bot, chatId, userId, async () => {
         const message = '⚙️ *Настройки*\n\n' +
                        `👤 Admin ID: ${ADMIN_ID}\n` +
@@ -275,10 +322,19 @@ async function handleSettingsAdmin(bot, chatId, userId) {
             ]
         };
         
-        await bot.sendMessage(chatId, message, {
-            parse_mode: 'Markdown',
-            reply_markup: keyboard
-        });
+        if (messageId) {
+            await bot.editMessageText(message, {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        } else {
+            await bot.sendMessage(chatId, message, {
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        }
     });
 }
 
@@ -347,7 +403,7 @@ async function handleSetPriceCommand(bot, msg) {
     const chatId = msg.chat.id;
     const userId = msg.from.id;
     
-    requireAdmin(bot, chatId, userId, () => {
+    requireAdmin(bot, chatId, userId, async () => {
         const parts = msg.text.split(' ');
         
         if (parts.length < 3) {
@@ -396,7 +452,7 @@ async function handleSetDiscountCommand(bot, msg) {
     const chatId = msg.chat.id;
     const userId = msg.from.id;
     
-    requireAdmin(bot, chatId, userId, () => {
+    requireAdmin(bot, chatId, userId, async () => {
         const parts = msg.text.split(' ');
         
         if (parts.length < 3) {
@@ -445,6 +501,7 @@ async function handleSetDiscountCommand(bot, msg) {
 async function handleAdminCallback(bot, query) {
     const chatId = query.message.chat.id;
     const userId = query.from.id;
+    const messageId = query.message.message_id;
     const data = query.data;
     
     if (!isAdmin(userId)) {
@@ -459,39 +516,61 @@ async function handleAdminCallback(bot, query) {
     
     switch(data) {
         case 'admin_back':
-            // Создаем объект msg с правильной структурой для handleAdminCommand
-            const mockMsg = {
-                chat: { id: chatId },
-                from: { id: userId }
+            // Редактируем сообщение для возврата в главное меню
+            const keyboard = {
+                inline_keyboard: [
+                    [
+                        { text: '📦 Товары', callback_data: 'admin_products' },
+                        { text: '🔑 Ключи', callback_data: 'admin_keys' }
+                    ],
+                    [
+                        { text: '📊 Заказы', callback_data: 'admin_orders' },
+                        { text: '📢 Баннеры', callback_data: 'admin_banners' }
+                    ],
+                    [
+                        { text: '⚙️ Настройки', callback_data: 'admin_settings' }
+                    ]
+                ]
             };
-            await handleAdminCommand(bot, mockMsg);
+            
+            await bot.editMessageText(
+                '🔧 *Админ-панель*\n\nВыберите раздел для управления:',
+                {
+                    chat_id: chatId,
+                    message_id: messageId,
+                    parse_mode: 'Markdown',
+                    reply_markup: keyboard
+                }
+            );
             break;
         case 'admin_products':
-            await handleProductsAdmin(bot, chatId, userId);
+            await handleProductsAdmin(bot, chatId, userId, messageId);
             break;
         case 'admin_keys':
-            await handleKeysAdmin(bot, chatId, userId);
+            await handleKeysAdmin(bot, chatId, userId, messageId);
             break;
         case 'admin_orders':
-            await handleOrdersAdmin(bot, chatId, userId);
+            await handleOrdersAdmin(bot, chatId, userId, messageId);
             break;
         case 'admin_banners':
-            await handleBannersAdmin(bot, chatId, userId);
+            await handleBannersAdmin(bot, chatId, userId, messageId);
             break;
         case 'admin_settings':
-            await handleSettingsAdmin(bot, chatId, userId);
+            await handleSettingsAdmin(bot, chatId, userId, messageId);
             break;
         case 'admin_add_keys':
             await handleAddKeys(bot, chatId, userId);
             break;
         case 'admin_edit_product':
-            await handleEditProductList(bot, chatId, userId);
+            await handleEditProductList(bot, chatId, userId, messageId);
             break;
         case 'admin_add_product':
         case 'admin_delete_product':
         case 'admin_view_keys':
         case 'admin_view_orders':
-            await bot.sendMessage(chatId, '⚠️ Функция в разработке', {
+            await bot.editMessageText('⚠️ Функция в разработке', {
+                chat_id: chatId,
+                message_id: messageId,
                 reply_markup: {
                     inline_keyboard: [[
                         { text: '« Назад', callback_data: 'admin_back' }
@@ -499,18 +578,22 @@ async function handleAdminCallback(bot, query) {
                 }
             });
             break;
+        case 'noop':
+            // Игнорируем заголовки регионов
+            await bot.answerCallbackQuery(query.id);
+            break;
         default:
             // Обработка редактирования конкретного товара
             if (data.startsWith('edit_product_')) {
                 const productId = data.replace('edit_product_', '');
-                await handleEditProductForm(bot, chatId, userId, productId);
+                await handleEditProductForm(bot, chatId, userId, productId, messageId);
             }
             break;
     }
 }
 
 // Show list of products to edit
-async function handleEditProductList(bot, chatId, userId) {
+async function handleEditProductList(bot, chatId, userId, messageId = null) {
     requireAdmin(bot, chatId, userId, async () => {
         const productsPath = path.join(__dirname, '..', 'data', 'products.json');
         const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
@@ -554,18 +637,27 @@ async function handleEditProductList(bot, chatId, userId) {
             { text: '« Назад', callback_data: 'admin_products' }
         ]);
         
-        await bot.sendMessage(chatId, 
-            '✏️ *Выберите товар для редактирования:*',
-            {
+        if (messageId) {
+            await bot.editMessageText('✏️ *Выберите товар для редактирования:*', {
+                chat_id: chatId,
+                message_id: messageId,
                 parse_mode: 'Markdown',
                 reply_markup: keyboard
-            }
-        );
+            });
+        } else {
+            await bot.sendMessage(chatId, 
+                '✏️ *Выберите товар для редактирования:*',
+                {
+                    parse_mode: 'Markdown',
+                    reply_markup: keyboard
+                }
+            );
+        }
     });
 }
 
 // Show edit form for specific product
-async function handleEditProductForm(bot, chatId, userId, productId) {
+async function handleEditProductForm(bot, chatId, userId, productId, messageId = null) {
     requireAdmin(bot, chatId, userId, async () => {
         const productsPath = path.join(__dirname, '..', 'data', 'products.json');
         const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
@@ -587,19 +679,30 @@ async function handleEditProductForm(bot, chatId, userId, productId) {
                        `\`/setdiscount ${productId} СКИДКА\`\n` +
                        `Пример: \`/setdiscount ${productId} 15\``;
         
-        await bot.sendMessage(chatId, message, {
-            parse_mode: 'Markdown',
-            reply_markup: {
-                inline_keyboard: [
-                    [
-                        { text: '« К списку товаров', callback_data: 'admin_edit_product' }
-                    ],
-                    [
-                        { text: '« Назад', callback_data: 'admin_products' }
-                    ]
+        const keyboard = {
+            inline_keyboard: [
+                [
+                    { text: '« К списку товаров', callback_data: 'admin_edit_product' }
+                ],
+                [
+                    { text: '« Назад', callback_data: 'admin_products' }
                 ]
-            }
-        });
+            ]
+        };
+        
+        if (messageId) {
+            await bot.editMessageText(message, {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        } else {
+            await bot.sendMessage(chatId, message, {
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        }
     });
 }
 
