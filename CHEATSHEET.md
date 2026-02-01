@@ -1,0 +1,359 @@
+# 🎯 Шпаргалка администратора INSIDER PlayStation
+
+## 🚀 Быстрый доступ
+
+**Бот:** [@insiderplaystation_bot](https://t.me/insiderplaystation_bot)  
+**Сайт:** [insiderplaystation.ru](https://insiderplaystation.ru)  
+**GitHub:** [lavrentevnikita-afk/insiderps_cardshop](https://github.com/lavrentevnikita-afk/insiderps_cardshop)
+
+---
+
+## 📱 Команды бота
+
+### Базовые команды
+```
+/admin                           # Главное меню админки
+/start                           # Приветствие
+/help                            # Помощь
+/shop                            # Открыть магазин
+```
+
+### Управление ценами
+```
+/setprice PRODUCT_ID PRICE       # Изменить цену
+/setdiscount PRODUCT_ID DISCOUNT # Установить скидку (0-100)
+```
+
+**Примеры:**
+```
+/setprice us_10 774
+/setprice in_1000 1050
+/setdiscount us_10 10
+/setdiscount tr_250 0
+```
+
+### Массовые операции
+```
+/bulkprice REGION MULTIPLIER     # Изменить цены региона
+/bulkdiscount REGION DISCOUNT    # Скидка на регион
+/resetdiscounts                  # Сбросить все скидки
+```
+
+**Примеры:**
+```
+/bulkprice USA 1.1               # Цены США +10%
+/bulkprice India 0.9             # Цены Индии -10%
+/bulkdiscount Turkey 15          # Скидка 15% на Турцию
+/bulkdiscount ALL 10             # Скидка 10% на все
+/resetdiscounts                  # Все скидки = 0%
+```
+
+**Регионы:** `USA`, `India`, `Poland`, `Turkey`, `ALL`
+
+### Управление ключами
+```
+/addkey PRODUCT_ID               # Добавить ключи
+KEY1-XXXX-YYYY-ZZZZ
+KEY2-XXXX-YYYY-ZZZZ
+KEY3-XXXX-YYYY-ZZZZ
+```
+
+**Пример:**
+```
+/addkey us_10
+USA10-1234-5678-9012
+USA10-2345-6789-0123
+USA10-3456-7890-1234
+```
+
+---
+
+## 🆔 ID товаров
+
+### 🇺🇸 США (USD)
+```
+us_5    # 5$
+us_10   # 10$
+us_25   # 25$
+us_50   # 50$
+```
+
+### 🇮🇳 Индия (INR)
+```
+in_500   # 500₹
+in_1000  # 1000₹
+in_2000  # 2000₹
+```
+
+### 🇵🇱 Польша (PLN)
+```
+pl_50   # 50zł
+pl_100  # 100zł
+pl_250  # 250zł
+```
+
+### 🇹🇷 Турция (TRY)
+```
+tr_50   # 50₺
+tr_100  # 100₺
+tr_250  # 250₺
+```
+
+---
+
+## 🖥️ Серверные команды
+
+### SSH подключение
+```bash
+ssh root@84.252.74.101
+```
+
+### PM2 (Process Manager)
+```bash
+pm2 status                       # Статус процессов
+pm2 restart all                  # Перезапуск всех
+pm2 restart psshop-bot           # Перезапуск бота
+pm2 restart psshop-server        # Перезапуск сервера
+pm2 logs                         # Просмотр логов
+pm2 logs psshop-bot              # Логи бота
+pm2 logs psshop-server           # Логи сервера
+pm2 monit                        # Мониторинг в реальном времени
+pm2 stop all                     # Остановить все
+pm2 start all                    # Запустить все
+```
+
+### Git обновления
+```bash
+cd /var/www/insiderps_cardshop
+git pull origin main             # Получить обновления
+npm install                      # Обновить зависимости
+pm2 restart all                  # Перезапустить
+```
+
+### Быстрое обновление (update.sh)
+```bash
+cd /var/www/insiderps_cardshop
+./update.sh                      # Всё в одной команде
+```
+
+### Nginx
+```bash
+systemctl status nginx           # Статус
+systemctl restart nginx          # Перезапуск
+systemctl stop nginx             # Остановить
+systemctl start nginx            # Запустить
+nginx -t                         # Проверка конфигурации
+nano /etc/nginx/sites-available/insiderplaystation.ru  # Редактировать конфиг
+```
+
+### SSL сертификаты
+```bash
+certbot renew                    # Обновить сертификаты
+certbot certificates             # Список сертификатов
+certbot --nginx -d insiderplaystation.ru -d www.insiderplaystation.ru  # Установить SSL
+```
+
+### Логи сервера
+```bash
+tail -f /var/log/nginx/error.log             # Ошибки Nginx
+tail -f /var/log/nginx/access.log            # Доступ Nginx
+pm2 logs psshop-bot --lines 50               # 50 последних строк бота
+pm2 logs psshop-server --lines 50            # 50 последних строк сервера
+```
+
+---
+
+## 📂 Важные файлы
+
+### На сервере
+```
+/var/www/insiderps_cardshop/          # Корень проекта
+├── .env                               # Конфигурация
+├── data/products.json                 # Товары
+├── data/keys.json                     # Ключи
+├── data/orders.json                   # Заказы
+├── data/logs.json                     # Логи админа
+└── update.sh                          # Скрипт обновления
+```
+
+### Конфигурация
+```bash
+nano /var/www/insiderps_cardshop/.env               # Основная конфигурация
+nano /etc/nginx/sites-available/insiderplaystation.ru  # Nginx конфиг
+```
+
+---
+
+## 🔧 Решение проблем
+
+### Бот не отвечает
+```bash
+pm2 status                       # Проверить статус
+pm2 logs psshop-bot --lines 100  # Посмотреть логи
+pm2 restart psshop-bot           # Перезапустить бота
+```
+
+### Сайт не открывается
+```bash
+systemctl status nginx           # Статус Nginx
+pm2 status                       # Статус сервера
+curl http://localhost:3000       # Проверка локально
+```
+
+### Ошибка 502 Bad Gateway
+```bash
+pm2 restart psshop-server        # Перезапустить сервер
+systemctl restart nginx          # Перезапустить Nginx
+```
+
+### Нет SSL / HTTPS не работает
+```bash
+certbot certificates             # Проверить сертификаты
+certbot renew                    # Обновить
+systemctl restart nginx          # Перезапустить Nginx
+```
+
+### Изменения не применились
+```bash
+cd /var/www/insiderps_cardshop
+git pull origin main             # Получить новый код
+npm install                      # Обновить зависимости
+pm2 restart all                  # Перезапустить всё
+```
+
+---
+
+## 📊 Мониторинг
+
+### Проверка работоспособности
+```bash
+# Статус процессов
+pm2 status
+
+# Использование ресурсов
+pm2 monit
+
+# Открыт ли порт 3000
+netstat -tlnp | grep 3000
+
+# Проверка сайта
+curl https://insiderplaystation.ru
+
+# Проверка API
+curl https://insiderplaystation.ru/api/products
+curl https://insiderplaystation.ru/health
+```
+
+### Здоровье сервера
+```bash
+free -h                          # Память
+df -h                            # Диск
+top                              # Процессы
+htop                             # Интерактивный мониторинг
+```
+
+---
+
+## 💾 Бэкапы
+
+### Ручной бэкап данных
+```bash
+cd /var/www/insiderps_cardshop
+cp -r data/ ~/backups/data_$(date +%Y%m%d_%H%M%S)/
+```
+
+### Бэкап перед массовыми операциями
+```bash
+cp data/products.json data/products.json.backup_$(date +%Y%m%d)
+```
+
+### Восстановление из бэкапа
+```bash
+cd /var/www/insiderps_cardshop
+cp ~/backups/data_YYYYMMDD/products.json data/products.json
+pm2 restart all
+```
+
+---
+
+## 🔐 Безопасность
+
+### Важные переменные (.env)
+```env
+BOT_TOKEN=8309044989:AAFIFT8ADWQOL06qxrSMuOTY2kNP5YVHZ54
+ADMIN_ID=5528259423
+PAYMENT_TOKEN=your_payment_token
+WEBAPP_URL=https://insiderplaystation.ru
+PORT=3000
+```
+
+### Не публикуйте:
+- ❌ BOT_TOKEN
+- ❌ ADMIN_ID
+- ❌ PAYMENT_TOKEN
+- ❌ .env файл
+
+---
+
+## 🌐 URL и ссылки
+
+**Production:**
+- https://insiderplaystation.ru
+- https://www.insiderplaystation.ru
+
+**API:**
+- https://insiderplaystation.ru/api/products
+- https://insiderplaystation.ru/api/orders?email=...
+- https://insiderplaystation.ru/health
+
+**Telegram:**
+- Бот: [@insiderplaystation_bot](https://t.me/insiderplaystation_bot)
+- Support: [@insider_mngr](https://t.me/insider_mngr)
+- Channel: [@insider_playstation](https://t.me/insider_playstation)
+
+**GitHub:**
+- https://github.com/lavrentevnikita-afk/insiderps_cardshop
+
+---
+
+## 📞 Поддержка
+
+**Telegram:** [@insider_mngr](https://t.me/insider_mngr)
+
+**Документация:**
+- [README.md](README.md) - Общая документация
+- [ADMIN.md](ADMIN.md) - Руководство администратора
+- [INSTALLATION.md](INSTALLATION.md) - Установка
+- [SUMMARY.md](SUMMARY.md) - Полная документация
+
+---
+
+## ⚡ Полезные алиасы (optional)
+
+Добавьте в `~/.bashrc` для быстрого доступа:
+
+```bash
+alias psshop='cd /var/www/insiderps_cardshop'
+alias psupdate='cd /var/www/insiderps_cardshop && ./update.sh'
+alias pslogs='pm2 logs psshop-bot psshop-server'
+alias psstatus='pm2 status'
+alias psrestart='pm2 restart all'
+```
+
+После добавления:
+```bash
+source ~/.bashrc
+```
+
+Использование:
+```bash
+psshop          # Перейти в папку проекта
+psupdate        # Обновить проект
+pslogs          # Посмотреть логи
+psstatus        # Статус процессов
+psrestart       # Перезапустить всё
+```
+
+---
+
+**Сохраните этот файл для быстрого доступа к командам!** 🚀
