@@ -692,6 +692,116 @@ body::before {
     animation: rotate 10s linear infinite;
 }
 
+/* Анимация флагов по диагонали */
+@keyframes flagsDiagonal {
+    0% {
+        transform: translate(-100%, -100%);
+    }
+    100% {
+        transform: translate(100%, 100%);
+    }
+}
+
+/* США - синий */
+.region-usa .product-image {
+    background: linear-gradient(135deg, #002868 0%, #0047ab 100%);
+}
+
+.region-usa .product-image::before {
+    content: '🇺🇸';
+    font-size: 80px;
+    opacity: 0.15;
+    animation: flagsDiagonal 8s linear infinite;
+    background: none;
+    width: auto;
+    height: auto;
+}
+
+.region-usa .product-image::after {
+    content: '🇺🇸';
+    position: absolute;
+    font-size: 60px;
+    opacity: 0.1;
+    animation: flagsDiagonal 12s linear infinite reverse;
+    top: 50%;
+    left: 50%;
+}
+
+/* Польша - красно-белая */
+.region-poland .product-image {
+    background: linear-gradient(180deg, #ffffff 0%, #ffffff 50%, #dc143c 50%, #dc143c 100%);
+}
+
+.region-poland .product-image::before {
+    content: '🇵🇱';
+    font-size: 80px;
+    opacity: 0.2;
+    animation: flagsDiagonal 8s linear infinite;
+    background: none;
+    width: auto;
+    height: auto;
+}
+
+.region-poland .product-image::after {
+    content: '🇵🇱';
+    position: absolute;
+    font-size: 60px;
+    opacity: 0.15;
+    animation: flagsDiagonal 12s linear infinite reverse;
+    top: 50%;
+    left: 50%;
+}
+
+/* Турция - красная */
+.region-turkey .product-image {
+    background: linear-gradient(135deg, #e30a17 0%, #c4081a 100%);
+}
+
+.region-turkey .product-image::before {
+    content: '🇹🇷';
+    font-size: 80px;
+    opacity: 0.15;
+    animation: flagsDiagonal 8s linear infinite;
+    background: none;
+    width: auto;
+    height: auto;
+}
+
+.region-turkey .product-image::after {
+    content: '🇹🇷';
+    position: absolute;
+    font-size: 60px;
+    opacity: 0.1;
+    animation: flagsDiagonal 12s linear infinite reverse;
+    top: 50%;
+    left: 50%;
+}
+
+/* Индия - оранжевая */
+.region-india .product-image {
+    background: linear-gradient(135deg, #ff9933 0%, #ff6600 100%);
+}
+
+.region-india .product-image::before {
+    content: '🇮🇳';
+    font-size: 80px;
+    opacity: 0.15;
+    animation: flagsDiagonal 8s linear infinite;
+    background: none;
+    width: auto;
+    height: auto;
+}
+
+.region-india .product-image::after {
+    content: '🇮🇳';
+    position: absolute;
+    font-size: 60px;
+    opacity: 0.1;
+    animation: flagsDiagonal 12s linear infinite reverse;
+    top: 50%;
+    left: 50%;
+}
+
 .product-image img {
     width: 100%;
     height: 100%;

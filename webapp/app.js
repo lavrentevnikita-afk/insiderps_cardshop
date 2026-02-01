@@ -328,12 +328,14 @@ function createProductCard(product) {
         : '';
     
     const imageUrl = product.image || 'https://via.placeholder.com/400x250/003087/00a8ff?text=PlayStation+Card';
+    const regionClass = `region-${product.region.toLowerCase()}`;
     
     return `
-        <div class="product-card" onclick="app.showProduct('${product.id}')">
+        <div class="product-card ${regionClass}" onclick="app.showProduct('${product.id}')">
             ${discountTag}
             <div class="product-image">
                 <img src="${imageUrl}" alt="${product.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/400x250/003087/00a8ff?text=PlayStation+Card'">
+            </div>
             </div>
             <div class="product-info">
                 <div class="product-title">
