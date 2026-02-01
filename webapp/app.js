@@ -519,55 +519,69 @@ function renderCart() {
                 const regionClass = `region-${item.region.toLowerCase()}`;
                 return `
                 <div class="cart-item ${regionClass}">
-                    <div class="cart-item-image">
+                    <div class="cart-item-left">
+                        <div class="cart-item-image"></div>
+                        <div class="cart-item-details">
+                            <div class="cart-item-title">${item.name}</div>
+                            <div class="cart-item-meta">
+                                <span class="cart-item-currency">${item.currency}</span>
+                                <span class="cart-item-separator">•</span>
+                                <span class="cart-item-region">${item.region}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="cart-item-info">
-                        <div class="cart-item-title">${item.name}</div>
-                        <div class="cart-item-currency">${item.currency}</div>
-                        <div class="cart-item-price">${item.price * item.quantity}₽</div>
+                    <div class="cart-item-right">
+                        <div class="cart-item-price-block">
+                            <div class="cart-item-quantity">×${item.quantity}</div>
+                            <div class="cart-item-price">${item.price * item.quantity}₽</div>
+                        </div>
+                        <button class="cart-item-remove" onclick="app.removeFromCart('${item.id}')" title="Удалить товар">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            </svg>
+                        </button>
                     </div>
-                    <button class="cart-item-remove" onclick="app.removeFromCart('${item.id}')">
-                        Удалить
-                    </button>
                 </div>
                 `;
             }).join('')}
         </div>
         
-        <div class="cart-payment">
-            <h3>Способ оплаты</h3>
-            <div class="payment-methods">
-                <div class="payment-method active" onclick="selectPaymentMethod(this)">
-                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 32'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle' font-size='16' fill='%23003087'%3EСБП%3C/text%3E%3C/svg%3E" alt="СБП">
-                </div>
-                <div class="payment-method" onclick="selectPaymentMethod(this)">
-                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 32'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle' font-size='12' fill='%23003087'%3EМИР%3C/text%3E%3C/svg%3E" alt="МИР">
-                </div>
-                <div class="payment-method" onclick="selectPaymentMethod(this)">
-                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 32'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle' font-size='10' fill='%231434CB'%3EVISA%3C/text%3E%3C/svg%3E" alt="VISA">
+        <div class="cart-summary">
+            <div class="cart-summary-block">
+                <div class="cart-summary-label">Оплата</div>
+                <div class="payment-methods">
+                    <div class="payment-method active" onclick="selectPaymentMethod(this)" title="СБП">
+                        <span>СБП</span>
+                    </div>
+                    <div class="payment-method" onclick="selectPaymentMethod(this)" title="МИР">
+                        <span>МИР</span>
+                    </div>
+                    <div class="payment-method" onclick="selectPaymentMethod(this)" title="VISA">
+                        <span>VISA</span>
+                    </div>
                 </div>
             </div>
             
-            <div class="cart-email">
-                <label for="email">E-mail</label>
-                <input type="email" id="email" placeholder="Ваш E-mail" />
+            <div class="cart-summary-block">
+                <div class="cart-summary-label">E-mail для получения</div>
+                <input type="email" id="email" class="cart-email-input" placeholder="example@mail.ru" />
             </div>
-        </div>
-        
-        <div class="cart-total">
-            <div class="cart-total-row">
-                <span>СВП От</span>
-                <span>${subtotal}₽</span>
-            </div>
-            ${discount > 0 ? `
-                <div class="cart-total-row discount">
-                    <span>Скидка</span>
-                    <span>-${discount}₽</span>
+            
+            <div class="cart-total">
+                ${discount > 0 ? `
+                    <div class="cart-total-row">
+                        <span>Товары</span>
+                        <span>${subtotal + discount}₽</span>
+                    </div>
+                    <div class="cart-total-row discount">
+                        <span>Скидка</span>
+                        <span>-${discount}₽</span>
+                    </div>
+                ` : ''}
+                <div class="cart-total-row total">
+                    <span>К оплате</span>
+                    <span>${total}₽</span>
                 </div>
-            ` : ''}
-            <div class="cart-total-row final">
-                <span>Сумма</span>
-                <span>${total}₽</span>
             </div>
         </div>
         
