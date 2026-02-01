@@ -504,15 +504,15 @@ body::before {
 /* Regions Grid */
 .regions-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
 }
 
 .region-card {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 24px 16px;
+    border-radius: 10px;
+    padding: 16px 12px;
     text-align: center;
     cursor: pointer;
     transition: all var(--transition-normal) var(--ease-smooth);
@@ -568,8 +568,8 @@ body::before {
 }
 
 .region-icon {
-    font-size: 42px;
-    margin-bottom: 10px;
+    font-size: 32px;
+    margin-bottom: 8px;
     display: inline-block;
     transition: transform var(--transition-normal) var(--ease-bounce);
     filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.3));
@@ -581,7 +581,7 @@ body::before {
 
 .region-card span {
     display: block;
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-secondary);
     font-weight: 500;
     transition: color var(--transition-fast) var(--ease-smooth);
