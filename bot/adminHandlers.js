@@ -78,6 +78,87 @@ function logAction(action, userId, details) {
     }
 }
 
+// Check keys availability and send alert if low
+function checkKeysStock() {
+    try {
+        const keysPath = path.join(__dirname, '..', 'data', 'keys.json');
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        
+        if (!fs.existsSync(keysPath) || !fs.existsSync(productsPath)) {
+            return [];
+        }
+        
+        const keys = JSON.parse(fs.readFileSync(keysPath, 'utf8'));
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        
+        const lowStockProducts = [];
+        
+        products.forEach(product => {
+            const productKeys = keys[product.id] || [];
+            const keysCount = productKeys.length;
+            
+            // Алерт если меньше 5 ключей или 0
+            if (keysCount === 0) {
+                lowStockProducts.push({
+                    id: product.id,
+                    name: product.name,
+                    count: keysCount,
+                    status: 'out_of_stock'
+                });
+            } else if (keysCount < 5) {
+                lowStockProducts.push({
+                    id: product.id,
+                    name: product.name,
+                    count: keysCount,
+                    status: 'low_stock'
+                });
+            }
+        });
+        
+        return lowStockProducts;
+    } catch (error) {
+        console.error('Ошибка проверки остатков:', error);
+        return [];
+    }
+}
+
+// Send low stock alert to admin
+async function sendLowStockAlert(bot) {
+    if (!ADMIN_ID) return;
+    
+    const lowStockProducts = checkKeysStock();
+    
+    if (lowStockProducts.length === 0) return;
+    
+    let message = '⚠️ *Предупреждение об остатках!*\n\n';
+    
+    const outOfStock = lowStockProducts.filter(p => p.status === 'out_of_stock');
+    const lowStock = lowStockProducts.filter(p => p.status === 'low_stock');
+    
+    if (outOfStock.length > 0) {
+        message += '🚫 *Закончились ключи:*\n';
+        outOfStock.forEach(product => {
+            message += `• ${product.name} (ID: ${product.id})\n`;
+        });
+        message += '\n';
+    }
+    
+    if (lowStock.length > 0) {
+        message += '⚠️ *Мало ключей (< 5 шт):*\n';
+        lowStock.forEach(product => {
+            message += `• ${product.name}: ${product.count} шт.\n`;
+        });
+    }
+    
+    message += '\n💡 Добавьте ключи через /addkey [product_id]';
+    
+    try {
+        await bot.sendMessage(ADMIN_ID, message, { parse_mode: 'Markdown' });
+    } catch (error) {
+        console.error('Ошибка отправки уведомления об остатках:', error);
+    }
+}
+
 // Send notification to admin about new order
 async function notifyAdminNewOrder(bot, orderData) {
     if (!ADMIN_ID) return;
@@ -85,11 +166,12 @@ async function notifyAdminNewOrder(bot, orderData) {
     try {
         let message = '🔔 *Новый заказ!*\n\n';
         message += `📧 Email: ${orderData.email}\n`;
-        message += `💰 Сумма: ${orderData.total}₽\n\n`;
+        message += `💰 Сумма: ${orderData.totalAmount || orderData.total}₽\n\n`;
         message += `📦 Товары:\n`;
         
-        orderData.items.forEach((item, index) => {
-            message += `${index + 1}. ${item.name} x${item.quantity} - ${item.price * item.quantity}₽\n`;
+        const items = orderData.cart || orderData.items || [];
+        items.forEach((item, index) => {
+            message += `${index + 1}. ${item.name || item.id} x${item.quantity} - ${item.price * item.quantity}₽\n`;
         });
         
         message += `\n🕒 ${new Date().toLocaleString('ru-RU')}`;
@@ -99,6 +181,9 @@ async function notifyAdminNewOrder(bot, orderData) {
         }
         
         await bot.sendMessage(ADMIN_ID, message, { parse_mode: 'Markdown' });
+        
+        // Проверяем остатки после каждого заказа
+        await sendLowStockAlert(bot);
     } catch (error) {
         console.error('Ошибка отправки уведомления админу:', error);
     }
@@ -632,6 +717,12 @@ async function handleAdminCallback(bot, query) {
         case 'admin_edit_product':
             await handleEditProductList(bot, chatId, userId, messageId);
             break;
+        case 'stats_charts':
+            await handleStatsCharts(bot, chatId, userId, messageId);
+            break;
+        case 'stats_export':
+            await handleStatsExport(bot, chatId, userId);
+            break;
         case 'admin_add_product':
         case 'admin_delete_product':
         case 'admin_view_keys':
@@ -793,6 +884,7 @@ async function handleStatsAdmin(bot, chatId, userId, messageId = null) {
     requireAdmin(bot, chatId, userId, async () => {
         const ordersPath = path.join(__dirname, '..', 'data', 'orders.json');
         const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const keysPath = path.join(__dirname, '..', 'data', 'keys.json');
         
         let orders = [];
         if (fs.existsSync(ordersPath)) {
@@ -800,9 +892,10 @@ async function handleStatsAdmin(bot, chatId, userId, messageId = null) {
         }
         
         const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        const keys = fs.existsSync(keysPath) ? JSON.parse(fs.readFileSync(keysPath, 'utf8')) : {};
         
         // Общая статистика
-        const totalRevenue = orders.reduce((sum, order) => sum + (order.total || 0), 0);
+        const totalRevenue = orders.reduce((sum, order) => sum + (order.totalAmount || order.total || 0), 0);
         const avgOrder = orders.length > 0 ? Math.round(totalRevenue / orders.length) : 0;
         
         // Статистика за сегодня
@@ -811,26 +904,32 @@ async function handleStatsAdmin(bot, chatId, userId, messageId = null) {
             const orderDate = new Date(order.timestamp);
             return orderDate.toDateString() === today.toDateString();
         });
-        const todayRevenue = todayOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+        const todayRevenue = todayOrders.reduce((sum, order) => sum + (order.totalAmount || order.total || 0), 0);
         
         // Статистика за неделю
         const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
         const weekOrders = orders.filter(order => new Date(order.timestamp) >= weekAgo);
-        const weekRevenue = weekOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+        const weekRevenue = weekOrders.reduce((sum, order) => sum + (order.totalAmount || order.total || 0), 0);
+        
+        // Статистика за месяц
+        const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const monthOrders = orders.filter(order => new Date(order.timestamp) >= monthAgo);
+        const monthRevenue = monthOrders.reduce((sum, order) => sum + (order.totalAmount || order.total || 0), 0);
         
         // Топ товаров
         const productSales = {};
         orders.forEach(order => {
-            order.items.forEach(item => {
+            const items = order.cart || order.items || [];
+            items.forEach(item => {
                 if (!productSales[item.id]) {
                     productSales[item.id] = {
-                        name: item.name,
+                        name: item.name || item.id,
                         count: 0,
                         revenue: 0
                     };
                 }
                 productSales[item.id].count += item.quantity;
-                productSales[item.id].revenue += item.price * item.quantity;
+                productSales[item.id].revenue += (item.price || 0) * item.quantity;
             });
         });
         
@@ -838,32 +937,47 @@ async function handleStatsAdmin(bot, chatId, userId, messageId = null) {
             .sort((a, b) => b[1].count - a[1].count)
             .slice(0, 5);
         
-        let message = '📈 *Статистика продаж*\n\n';
-        message += '💰 *Общая статистика:*\n';
-        message += `📦 Всего заказов: ${orders.length}\n`;
-        message += `💵 Общая выручка: ${totalRevenue}₽\n`;
+        // Статистика по остаткам
+        const lowStockProducts = checkKeysStock();
+        const totalProducts = products.length;
+        const productsWithKeys = Object.keys(keys).filter(id => keys[id].length > 0).length;
+        
+        let message = '📈 *Статистика магазина*\n\n';
+        
+        message += '💰 *Выручка:*\n';
+        message += `📅 Сегодня: ${todayRevenue}₽ (${todayOrders.length} заказов)\n`;
+        message += `📊 Неделя: ${weekRevenue}₽ (${weekOrders.length} заказов)\n`;
+        message += `📈 Месяц: ${monthRevenue}₽ (${monthOrders.length} заказов)\n`;
+        message += `💵 Всего: ${totalRevenue}₽ (${orders.length} заказов)\n`;
         message += `📊 Средний чек: ${avgOrder}₽\n\n`;
         
-        message += '📅 *За сегодня:*\n';
-        message += `📦 Заказов: ${todayOrders.length}\n`;
-        message += `💵 Выручка: ${todayRevenue}₽\n\n`;
-        
-        message += '📊 *За неделю:*\n';
-        message += `📦 Заказов: ${weekOrders.length}\n`;
-        message += `💵 Выручка: ${weekRevenue}₽\n\n`;
+        message += '📦 *Товары и остатки:*\n';
+        message += `📋 Всего товаров: ${totalProducts}\n`;
+        message += `✅ С ключами: ${productsWithKeys}\n`;
+        if (lowStockProducts.length > 0) {
+            message += `⚠️ Требуют внимания: ${lowStockProducts.length}\n`;
+        }
+        message += '\n';
         
         if (topProducts.length > 0) {
-            message += '🏆 *Топ товаров:*\n';
+            message += '🏆 *Топ продаж:*\n';
             topProducts.forEach((item, index) => {
                 const [id, data] = item;
+                const keysLeft = (keys[id] || []).length;
+                const stockIcon = keysLeft === 0 ? '🚫' : keysLeft < 5 ? '⚠️' : '✅';
                 message += `${index + 1}. ${data.name}\n`;
-                message += `   Продано: ${data.count} шт. | ${data.revenue}₽\n`;
+                message += `   ${data.count} шт. × ${Math.round(data.revenue / data.count)}₽ = ${data.revenue}₽ ${stockIcon}\n`;
             });
         }
         
         const keyboard = {
             inline_keyboard: [
                 [
+                    { text: '📊 Графики продаж', callback_data: 'stats_charts' },
+                    { text: '📥 Экспорт', callback_data: 'stats_export' }
+                ],
+                [
+                    { text: '🔄 Обновить', callback_data: 'admin_stats' },
                     { text: '« Назад', callback_data: 'admin_back' }
                 ]
             ]
@@ -2025,6 +2139,197 @@ function handleBannerOrderEdit(bot, query, bannerId) {
     bot.answerCallbackQuery(query.id);
 }
 
+// Handle stats charts
+async function handleStatsCharts(bot, chatId, userId, messageId) {
+    requireAdmin(bot, chatId, userId, async () => {
+        const ordersPath = path.join(__dirname, '..', 'data', 'orders.json');
+        
+        let orders = [];
+        if (fs.existsSync(ordersPath)) {
+            orders = JSON.parse(fs.readFileSync(ordersPath, 'utf8'));
+        }
+        
+        // Статистика по дням за последние 7 дней
+        const last7Days = [];
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+            
+            const dayOrders = orders.filter(order => {
+                const orderDate = new Date(order.timestamp);
+                return orderDate.toDateString() === date.toDateString();
+            });
+            
+            const dayRevenue = dayOrders.reduce((sum, order) => sum + (order.totalAmount || order.total || 0), 0);
+            
+            last7Days.push({
+                date: dateStr,
+                orders: dayOrders.length,
+                revenue: dayRevenue
+            });
+        }
+        
+        // Текстовой график
+        const maxRevenue = Math.max(...last7Days.map(d => d.revenue), 1);
+        const barLength = 15;
+        
+        let message = '📊 *График продаж за неделю*\n\n';
+        
+        last7Days.forEach(day => {
+            const bars = Math.round((day.revenue / maxRevenue) * barLength);
+            const barStr = '▓'.repeat(bars) + '░'.repeat(barLength - bars);
+            message += `${day.date}: ${barStr}\n`;
+            message += `   ${day.orders} зак. | ${day.revenue}₽\n\n`;
+        });
+        
+        message += `\n💡 Максимум: ${maxRevenue}₽`;
+        
+        const keyboard = {
+            inline_keyboard: [
+                [{ text: '« К статистике', callback_data: 'admin_stats' }]
+            ]
+        };
+        
+        await bot.editMessageText(message, {
+            chat_id: chatId,
+            message_id: messageId,
+            parse_mode: 'Markdown',
+            reply_markup: keyboard
+        });
+    });
+}
+
+// Export stats to CSV
+async function handleStatsExport(bot, chatId, userId) {
+    requireAdmin(bot, chatId, userId, async () => {
+        const ordersPath = path.join(__dirname, '..', 'data', 'orders.json');
+        
+        let orders = [];
+        if (fs.existsSync(ordersPath)) {
+            orders = JSON.parse(fs.readFileSync(ordersPath, 'utf8'));
+        }
+        
+        if (orders.length === 0) {
+            await bot.sendMessage(chatId, '⚠️ Нет данных для экспорта');
+            return;
+        }
+        
+        // Формируем CSV
+        let csv = 'Дата,Email,Сумма,Товары,Количество\n';
+        
+        orders.forEach(order => {
+            const date = new Date(order.timestamp).toLocaleString('ru-RU');
+            const email = order.email || 'Не указан';
+            const total = order.totalAmount || order.total || 0;
+            const items = order.cart || order.items || [];
+            const itemsList = items.map(i => `${i.name || i.id}(x${i.quantity})`).join('; ');
+            const quantity = items.reduce((sum, i) => sum + i.quantity, 0);
+            
+            csv += `"${date}","${email}",${total},"${itemsList}",${quantity}\n`;
+        });
+        
+        // Отправляем файл
+        const buffer = Buffer.from(csv, 'utf-8');
+        
+        await bot.sendDocument(chatId, buffer, {
+            filename: `orders_${Date.now()}.csv`,
+            caption: `📊 Экспорт заказов\n\nВсего заказов: ${orders.length}\nДата: ${new Date().toLocaleDateString('ru-RU')}`
+        }, {
+            contentType: 'text/csv'
+        });
+        
+        logAction('export_orders', userId, { count: orders.length });
+    });
+}
+
+// Handle /checkstock command
+async function handleCheckStockCommand(bot, msg) {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    
+    requireAdmin(bot, chatId, userId, async () => {
+        const lowStockProducts = checkKeysStock();
+        
+        if (lowStockProducts.length === 0) {
+            await bot.sendMessage(chatId, '✅ Все товары в наличии! Нет товаров с низким остатком.');
+            return;
+        }
+        
+        let message = '📊 *Проверка остатков ключей*\n\n';
+        
+        const outOfStock = lowStockProducts.filter(p => p.status === 'out_of_stock');
+        const lowStock = lowStockProducts.filter(p => p.status === 'low_stock');
+        
+        if (outOfStock.length > 0) {
+            message += '🚫 *Нет ключей:*\n';
+            outOfStock.forEach(product => {
+                message += `• ${product.name}\n  ID: \`${product.id}\`\n`;
+            });
+            message += '\n';
+        }
+        
+        if (lowStock.length > 0) {
+            message += '⚠️ *Низкий остаток (< 5):*\n';
+            lowStock.forEach(product => {
+                message += `• ${product.name}: *${product.count} шт.*\n  ID: \`${product.id}\`\n`;
+            });
+        }
+        
+        message += '\n💡 Добавить ключи: `/addkey [id]`';
+        
+        await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+    });
+}
+
+// Handle /bulkimport command for mass key import
+async function handleBulkImportCommand(bot, msg) {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    
+    requireAdmin(bot, chatId, userId, async () => {
+        const text = msg.text.split(' ').slice(1).join(' ').trim();
+        
+        if (!text) {
+            await bot.sendMessage(chatId, 
+                '📝 *Массовый импорт ключей*\n\n' +
+                'Формат: `/bulkimport [product_id]`\n\n' +
+                'После команды отправьте файл .txt с ключами (каждый с новой строки)\n\n' +
+                'Пример:\n' +
+                '```\n/bulkimport us_5\n```\n' +
+                'Затем прикрепите файл keys.txt',
+                { parse_mode: 'Markdown' }
+            );
+            return;
+        }
+        
+        const productId = text;
+        
+        // Проверяем существование товара
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        const product = products.find(p => p.id === productId);
+        
+        if (!product) {
+            await bot.sendMessage(chatId, `❌ Товар с ID \`${productId}\` не найден`, { parse_mode: 'Markdown' });
+            return;
+        }
+        
+        // Сохраняем состояние для ожидания файла
+        userStates.set(userId, {
+            action: 'bulk_import_keys',
+            productId: productId,
+            productName: product.name
+        });
+        
+        await bot.sendMessage(chatId, 
+            `📦 Готов к импорту ключей для *${product.name}*\n\n` +
+            '📎 Отправьте файл .txt с ключами (каждый ключ с новой строки)',
+            { parse_mode: 'Markdown' }
+        );
+    });
+}
+
 module.exports = {
     handleAdminCommand,
     handleAdminCallback,
@@ -2037,6 +2342,8 @@ module.exports = {
     handleBannersCommand,
     handleBannerCallback,
     handleBannerInput,
+    handleCheckStockCommand,
+    handleBulkImportCommand,
     userStates,
     isAdmin,
     notifyAdminNewOrder,

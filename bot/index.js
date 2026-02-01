@@ -14,6 +14,8 @@ const {
     handleBannersCommand,
     handleBannerCallback,
     handleBannerInput,
+    handleCheckStockCommand,
+    handleBulkImportCommand,
     userStates
 } = require('./adminHandlers');
 
@@ -74,11 +76,17 @@ bot.onText(/\/resetdiscounts/, (msg) => handleResetDiscountsCommand(bot, msg));
 // Обработка команды /banners
 bot.onText(/\/banners/, (msg) => handleBannersCommand(bot, msg));
 
+// Обработка команды /checkstock
+bot.onText(/\/checkstock/, (msg) => handleCheckStockCommand(bot, msg));
+
+// Обработка команды /bulkimport
+bot.onText(/\/bulkimport/, (msg) => handleBulkImportCommand(bot, msg));
+
 // Обработка callback кнопок
 bot.on('callback_query', async (query) => {
   // Проверяем, это админский callback или обычный
   if (query.data.startsWith('admin_') || query.data.startsWith('edit_product_') || 
-      query.data.startsWith('banner_') || query.data === 'noop') {
+      query.data.startsWith('banner_') || query.data.startsWith('stats_') || query.data === 'noop') {
     if (query.data.startsWith('banner_')) {
       await handleBannerCallback(bot, query);
     } else {
@@ -101,6 +109,11 @@ bot.on('message', (msg) => {
   if (msg.text && msg.text.startsWith('/')) return;
   if (msg.web_app_data) return;
   if (msg.successful_payment) return;
+  if (msg.document) {
+    // Обработка файлов для массового импорта
+    handleDocumentMessage(bot, msg);
+    return;
+  }
   
   // Проверяем, есть ли активное состояние у пользователя
   const userId = msg.from.id;
@@ -108,6 +121,83 @@ bot.on('message', (msg) => {
     handleBannerInput(bot, msg);
   }
 });
+
+// Handle document uploads for bulk import
+async function handleDocumentMessage(bot, msg) {
+  const userId = msg.from.id;
+  const state = userStates.get(userId);
+  
+  if (!state || state.action !== 'bulk_import_keys') {
+    return;
+  }
+  
+  const fs = require('fs');
+  const path = require('path');
+  const https = require('https');
+  const http = require('http');
+  
+  try {
+    const file = await bot.getFile(msg.document.file_id);
+    const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+    
+    // Download file
+    const protocol = fileUrl.startsWith('https') ? https : http;
+    
+    protocol.get(fileUrl, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        // Parse keys from file
+        const keys = data.split('\n')
+          .map(line => line.trim())
+          .filter(line => line.length > 0);
+        
+        if (keys.length === 0) {
+          bot.sendMessage(msg.chat.id, '❌ Файл пуст или не содержит ключей');
+          userStates.delete(userId);
+          return;
+        }
+        
+        // Add keys to product
+        const keysPath = path.join(__dirname, '..', 'data', 'keys.json');
+        let allKeys = {};
+        
+        if (fs.existsSync(keysPath)) {
+          allKeys = JSON.parse(fs.readFileSync(keysPath, 'utf8'));
+        }
+        
+        if (!allKeys[state.productId]) {
+          allKeys[state.productId] = [];
+        }
+        
+        const beforeCount = allKeys[state.productId].length;
+        allKeys[state.productId].push(...keys);
+        const afterCount = allKeys[state.productId].length;
+        
+        fs.writeFileSync(keysPath, JSON.stringify(allKeys, null, 2));
+        
+        bot.sendMessage(msg.chat.id, 
+          `✅ *Импорт завершен!*\n\n` +
+          `📦 Товар: ${state.productName}\n` +
+          `➕ Добавлено: ${keys.length} ключей\n` +
+          `📊 Было: ${beforeCount} | Стало: ${afterCount}`,
+          { parse_mode: 'Markdown' }
+        );
+        
+        userStates.delete(userId);
+      });
+    }).on('error', (err) => {
+      console.error('Error downloading file:', err);
+      bot.sendMessage(msg.chat.id, '❌ Ошибка загрузки файла');
+      userStates.delete(userId);
+    });
+    
+  } catch (error) {
+    console.error('Error processing document:', error);
+    bot.sendMessage(msg.chat.id, '❌ Ошибка обработки файла');
+    userStates.delete(userId);
+  }
+}
 
 // Обработка Web App Data (для keyboard button mini apps)
 bot.on('web_app_data', (msg) => {
