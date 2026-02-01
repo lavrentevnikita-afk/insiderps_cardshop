@@ -271,6 +271,9 @@ async function loadPromoBanners() {
             if (banners.length > 0) {
                 const banner = banners[0]; // Show first active banner
                 
+                // Показываем баннер
+                slider.style.display = 'block';
+                
                 let bannerHTML = '<div class="promo-banner">';
                 
                 if (banner.image) {
@@ -290,27 +293,20 @@ async function loadPromoBanners() {
                 
                 slider.innerHTML = bannerHTML;
             } else {
-                slider.innerHTML = ''; // Hide if no banners
+                // Скрываем блок, если нет баннеров
+                slider.style.display = 'none';
+                slider.innerHTML = '';
             }
         } else {
-            // Fallback to hardcoded banners
-            console.log('Failed to load banners from API, using default');
-            slider.innerHTML = `
-                <div class="promo-banner">
-                    <h3>НЕ ХВАТАЕТ ПРИМОГЕМОВ?</h3>
-                    <p>САМЫЕ НИЗКИЕ ЦЕНЫ!</p>
-                </div>
-            `;
+            // Скрываем при ошибке
+            slider.style.display = 'none';
+            slider.innerHTML = '';
         }
     } catch (error) {
         console.error('Error loading banners:', error);
-        // Fallback to hardcoded banner
-        slider.innerHTML = `
-            <div class="promo-banner">
-                <h3>НЕ ХВАТАЕТ ПРИМОГЕМОВ?</h3>
-                <p>САМЫЕ НИЗКИЕ ЦЕНЫ!</p>
-            </div>
-        `;
+        // Скрываем при ошибке
+        slider.style.display = 'none';
+        slider.innerHTML = '';
     }
 }
 
