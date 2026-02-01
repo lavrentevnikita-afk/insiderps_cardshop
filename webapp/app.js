@@ -538,10 +538,17 @@ window.selectPaymentMethod = function(element) {
 // Checkout
 window.checkout = async function() {
     const email = document.getElementById('email')?.value;
+    const checkoutBtn = document.querySelector('.cart-checkout');
     
     if (!email || !email.includes('@')) {
         Toast.warning('Введите корректный email', 'Email обязателен для получения кодов');
         return;
+    }
+    
+    // Show loading state
+    if (checkoutBtn) {
+        checkoutBtn.classList.add('loading');
+        checkoutBtn.disabled = true;
     }
     
     // Подготовка данных заказа
@@ -584,6 +591,12 @@ window.checkout = async function() {
             const result = await response.json();
             
             if (result.success) {
+                // Remove loading state
+                if (checkoutBtn) {
+                    checkoutBtn.classList.remove('loading');
+                    checkoutBtn.disabled = false;
+                }
+                
                 Toast.success('✅ Заказ оформлен!', 'Коды отправлены в Telegram бот', 3000);
                 
                 // Очищаем корзину
@@ -601,7 +614,15 @@ window.checkout = async function() {
             }
         } catch (error) {
             console.error('❌ Ошибка отправки заказа:', error);
-            Toast.error('Ошибка оформления заказа', 'Попробуйте снова', 4000);
+            
+            // Remove loading state
+            if (checkoutBtn) {
+                checkoutBtn.classList.remove('loading');
+                checkoutBtn.disabled = false;
+            }
+            
+            // Show error with retry option
+            showCheckoutError(error.message, orderData);
         }
     } else {
         // Запущено через браузер - отправляем на email
@@ -619,6 +640,12 @@ window.checkout = async function() {
             const result = await response.json();
             
             if (result.success) {
+                // Remove loading state
+                if (checkoutBtn) {
+                    checkoutBtn.classList.remove('loading');
+                    checkoutBtn.disabled = false;
+                }
+                
                 Toast.success('✅ Заказ оформлен!', `Коды отправлены на ${email}`, 4000);
                 
                 // Очищаем корзину
@@ -631,9 +658,82 @@ window.checkout = async function() {
             }
         } catch (error) {
             console.error('❌ Ошибка отправки заказа:', error);
-            alert('❌ Ошибка оформления заказа. Попробуйте снова.');
+            
+            // Remove loading state
+            if (checkoutBtn) {
+                checkoutBtn.classList.remove('loading');
+                checkoutBtn.disabled = false;
+            }
+            
+            // Show error with retry option
+            showCheckoutError(error.message, orderData);
         }
     }
+};
+
+// Show beautiful error message with retry option
+function showCheckoutError(errorMessage, orderData) {
+    const cartContent = document.getElementById('cart-content');
+    if (!cartContent) return;
+    
+    // Create error component
+    const errorHtml = `
+        <div class="error-container">
+            <div class="error-icon">⚠️</div>
+            <div class="error-title">Ошибка оформления заказа</div>
+            <div class="error-message">
+                Произошла ошибка при отправке заказа. 
+                Пожалуйста, проверьте подключение к интернету и попробуйте снова.
+            </div>
+            ${errorMessage && errorMessage !== 'Failed to fetch' ? `
+                <div class="error-details">
+                    ${errorMessage}
+                </div>
+            ` : ''}
+            <div class="error-actions">
+                <button class="btn-retry" onclick="retryCheckout()">
+                    <span>↻</span>
+                    <span>Повторить попытку</span>
+                </button>
+                <button class="btn-cancel" onclick="hideCheckoutError()">
+                    <span>✕</span>
+                    <span>Отмена</span>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Insert error before checkout button
+    const checkoutBtn = cartContent.querySelector('.cart-checkout');
+    if (checkoutBtn) {
+        // Remove existing error if any
+        const existingError = cartContent.querySelector('.error-container');
+        if (existingError) existingError.remove();
+        
+        checkoutBtn.insertAdjacentHTML('beforebegin', errorHtml);
+    }
+    
+    // Store orderData for retry
+    window._lastOrderData = orderData;
+    
+    // Show toast notification
+    Toast.error('Ошибка оформления заказа', 'Попробуйте еще раз', 4000);
+}
+
+// Retry checkout
+window.retryCheckout = function() {
+    hideCheckoutError();
+    checkout();
+};
+
+// Hide error
+window.hideCheckoutError = function() {
+    const error = document.querySelector('.error-container');
+    if (error) {
+        error.style.animation = 'error-shake-reverse 0.3s ease-out';
+        setTimeout(() => error.remove(), 300);
+    }
+    delete window._lastOrderData;
 };
 
 // Helper functions
@@ -729,14 +829,17 @@ app.toggleTheme = function() {
 app.loadOrders = async function() {
     const emailInput = document.getElementById('orders-email');
     const email = emailInput.value.trim();
+    const loadBtn = document.querySelector('.email-input-group .btn');
     
     if (!email || !email.includes('@')) {
-        if (tg.showAlert) {
-            tg.showAlert('Введите корректный email');
-        } else {
-            alert('Введите корректный email');
-        }
+        Toast.warning('Введите корректный email', 'Email обязателен для поиска заказов');
         return;
+    }
+    
+    // Show loading state
+    if (loadBtn) {
+        loadBtn.classList.add('loading');
+        loadBtn.disabled = true;
     }
     
     const ordersList = document.getElementById('orders-list');
@@ -744,10 +847,22 @@ app.loadOrders = async function() {
     
     try {
         const response = await fetch(`/api/orders?email=${encodeURIComponent(email)}`);
+        
+        if (!response.ok) {
+            throw new Error('Ошибка сервера');
+        }
+        
         const data = await response.json();
+        
+        // Remove loading state
+        if (loadBtn) {
+            loadBtn.classList.remove('loading');
+            loadBtn.disabled = false;
+        }
         
         if (data.orders && data.orders.length > 0) {
             ordersList.innerHTML = data.orders.map(order => createOrderCard(order)).join('');
+            Toast.success('Заказы загружены', `Найдено заказов: ${data.orders.length}`);
         } else {
             ordersList.innerHTML = `
                 <div class="no-orders">
@@ -756,16 +871,35 @@ app.loadOrders = async function() {
                     <div class="no-orders-subtext">Для этого email пока нет заказов</div>
                 </div>
             `;
+            Toast.info('Заказы не найдены', 'Попробуйте другой email');
         }
     } catch (error) {
         console.error('Ошибка загрузки заказов:', error);
+        
+        // Remove loading state
+        if (loadBtn) {
+            loadBtn.classList.remove('loading');
+            loadBtn.disabled = false;
+        }
+        
         ordersList.innerHTML = `
-            <div class="no-orders">
-                <div class="no-orders-icon">❌</div>
-                <div class="no-orders-text">Ошибка загрузки</div>
-                <div class="no-orders-subtext">Попробуйте позже</div>
+            <div class="error-container">
+                <div class="error-icon">❌</div>
+                <div class="error-title">Ошибка загрузки заказов</div>
+                <div class="error-message">
+                    Не удалось загрузить историю заказов. 
+                    Проверьте подключение к интернету.
+                </div>
+                <div class="error-actions">
+                    <button class="btn-retry" onclick="app.loadOrders()">
+                        <span>↻</span>
+                        <span>Повторить</span>
+                    </button>
+                </div>
             </div>
         `;
+        
+        Toast.error('Ошибка загрузки', 'Проверьте подключение к интернету', 4000);
     }
 };
 
