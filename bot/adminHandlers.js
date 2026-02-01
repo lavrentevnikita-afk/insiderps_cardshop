@@ -343,31 +343,11 @@ async function handleOrdersAdmin(bot, chatId, userId, messageId = null) {
 // Banners management
 async function handleBannersAdmin(bot, chatId, userId, messageId = null) {
     requireAdmin(bot, chatId, userId, async () => {
-        const message = '📢 *Управление баннерами*\n\n' +
-                       'Здесь вы можете управлять промо-баннерами в приложении.\n\n' +
-                       '⚠️ Функция в разработке';
-        
-        const keyboard = {
-            inline_keyboard: [
-                [
-                    { text: '« Назад', callback_data: 'admin_back' }
-                ]
-            ]
-        };
-        
+        // Удаляем старое сообщение и вызываем полноценную систему баннеров
         if (messageId) {
-            await bot.editMessageText(message, {
-                chat_id: chatId,
-                message_id: messageId,
-                parse_mode: 'Markdown',
-                reply_markup: keyboard
-            });
-        } else {
-            await bot.sendMessage(chatId, message, {
-                parse_mode: 'Markdown',
-                reply_markup: keyboard
-            });
+            await bot.deleteMessage(chatId, messageId);
         }
+        handleBannersCommand(bot, { chat: { id: chatId }, from: { id: userId } });
     });
 }
 
