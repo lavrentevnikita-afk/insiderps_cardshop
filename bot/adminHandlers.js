@@ -7,6 +7,9 @@ const execPromise = util.promisify(exec);
 // Admin ID - добавьте свой Telegram ID
 const ADMIN_ID = process.env.ADMIN_ID ? parseInt(process.env.ADMIN_ID) : null;
 
+// User states for multi-step operations
+const userStates = new Map();
+
 // Check if user is admin
 function isAdmin(userId) {
     if (!ADMIN_ID) {
@@ -633,12 +636,6 @@ async function handleAdminCallback(bot, query) {
             break;
         case 'admin_stats':
             await handleStatsAdmin(bot, chatId, userId, messageId);
-            break;
-        case 'admin_banners':
-            // Удаляем старое сообщение и отправляем новое через команду
-            bot.deleteMessage(chatId, messageId);
-            handleBannersCommand(bot, { chat: { id: chatId }, from: { id: userId } });
-            bot.answerCallbackQuery(query.id);
             break;
         case 'admin_templates':
             await handleTemplatesAdmin(bot, chatId, userId, messageId);
@@ -1412,9 +1409,16 @@ function handleAddBanner(bot, query) {
         return;
     }
     
+    // Устанавливаем состояние
+    userStates.set(userId, { 
+        action: 'banner_add_title',
+        menuMessageId: query.message.message_id,
+        messagesToDelete: []
+    });
+    
     bot.editMessageText(
         '➕ *Создание нового баннера*\n\n' +
-        'Отправьте заголовок для нового баннера\n' +
+        '📝 Отправьте заголовок для нового баннера\n' +
         '_(например: "СКИДКИ ДО 50%")_',
         {
             chat_id: chatId,
@@ -1422,74 +1426,185 @@ function handleAddBanner(bot, query) {
             parse_mode: 'Markdown',
             reply_markup: {
                 inline_keyboard: [[
-                    { text: '« Отмена', callback_data: 'banner_list' }
+                    { text: '❌ Отмена', callback_data: 'banner_cancel' }
                 ]]
             }
         }
     );
     
-    // Устанавливаем состояние ожидания
-    bot.once('message', (msg) => {
-        if (msg.from.id !== userId) return;
-        if (msg.text && msg.text.startsWith('/')) return;
-        
+    bot.answerCallbackQuery(query.id);
+}
+
+// Handle banner text input
+async function handleBannerInput(bot, msg) {
+    const userId = msg.from.id;
+    const chatId = msg.chat.id;
+    const state = userStates.get(userId);
+    
+    if (!state) return;
+    if (!isAdmin(userId)) return;
+    
+    // Удаляем сообщение пользователя
+    try {
+        await bot.deleteMessage(chatId, msg.message_id);
+    } catch (e) {}
+    
+    if (state.action === 'banner_add_title') {
         const title = msg.text;
         
-        bot.sendMessage(chatId, 
-            `Заголовок: *${title}*\n\n` +
-            'Теперь отправьте подзаголовок\n' +
+        // Обновляем состояние
+        userStates.set(userId, {
+            action: 'banner_add_subtitle',
+            title: title,
+            menuMessageId: state.menuMessageId,
+            messagesToDelete: state.messagesToDelete
+        });
+        
+        // Обновляем сообщение
+        await bot.editMessageText(
+            '➕ *Создание нового баннера*\n\n' +
+            `✅ Заголовок: *${title}*\n\n` +
+            '📝 Теперь отправьте подзаголовок\n' +
             '_(например: "Только сегодня!")_',
             {
-                parse_mode: 'Markdown'
+                chat_id: chatId,
+                message_id: state.menuMessageId,
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '❌ Отмена', callback_data: 'banner_cancel' }
+                    ]]
+                }
             }
         );
         
-        bot.once('message', (msg2) => {
-            if (msg2.from.id !== userId) return;
-            if (msg2.text && msg2.text.startsWith('/')) return;
-            
-            const subtitle = msg2.text;
-            
-            // Создаем новый баннер
-            const banners = loadBanners();
-            const newId = banners.length > 0 ? Math.max(...banners.map(b => b.id)) + 1 : 1;
-            const newOrder = banners.length > 0 ? Math.max(...banners.map(b => b.order)) + 1 : 1;
-            
-            const newBanner = {
-                id: newId,
-                enabled: true,
-                title: title,
-                subtitle: subtitle,
-                image: null,
-                link: null,
-                order: newOrder
-            };
-            
-            banners.push(newBanner);
+    } else if (state.action === 'banner_add_subtitle') {
+        const subtitle = msg.text;
+        const title = state.title;
+        
+        // Создаем новый баннер
+        const banners = loadBanners();
+        const newId = banners.length > 0 ? Math.max(...banners.map(b => b.id)) + 1 : 1;
+        const newOrder = banners.length > 0 ? Math.max(...banners.map(b => b.order)) + 1 : 1;
+        
+        const newBanner = {
+            id: newId,
+            enabled: true,
+            title: title,
+            subtitle: subtitle,
+            image: null,
+            link: null,
+            order: newOrder
+        };
+        
+        banners.push(newBanner);
+        saveBanners(banners);
+        
+        logAction('ADD_BANNER', userId, { bannerId: newId, title });
+        await syncToGitHub(`Добавлен новый баннер #${newId}`);
+        
+        // Удаляем состояние
+        userStates.delete(userId);
+        
+        // Обновляем сообщение
+        await bot.editMessageText(
+            `✅ *Баннер создан!*\n\n` +
+            `📝 ${title}\n` +
+            `📄 ${subtitle}\n\n` +
+            `ID: #${newId} | Порядок: ${newOrder}`,
+            {
+                chat_id: chatId,
+                message_id: state.menuMessageId,
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            { text: '⚙️ Настроить баннер', callback_data: `banner_view_${newId}` }
+                        ],
+                        [
+                            { text: '📋 К списку баннеров', callback_data: 'banner_list' }
+                        ]
+                    ]
+                }
+            }
+        );
+    } else if (state.action === 'banner_edit_link') {
+        const link = msg.text;
+        const bannerId = state.bannerId;
+        
+        const banners = loadBanners();
+        const banner = banners.find(b => b.id === bannerId);
+        
+        if (banner) {
+            banner.link = link;
             saveBanners(banners);
             
-            logAction('ADD_BANNER', userId, { bannerId: newId, title });
-            syncToGitHub(`Добавлен новый баннер #${newId}`);
-            
-            bot.sendMessage(chatId, 
-                `✅ *Баннер создан!*\n\n` +
-                `📝 ${title}\n` +
-                `📄 ${subtitle}\n\n` +
-                `Вы можете добавить изображение и ссылку в настройках баннера`,
-                {
-                    parse_mode: 'Markdown',
-                    reply_markup: {
-                        inline_keyboard: [[
-                            { text: '⚙️ Настроить баннер', callback_data: `banner_view_${newId}` },
-                            { text: '📋 К списку', callback_data: 'banner_list' }
-                        ]]
-                    }
+            logAction('EDIT_BANNER_LINK', userId, { bannerId, link });
+            await syncToGitHub(`Обновлена ссылка баннера #${bannerId}`);
+        }
+        
+        userStates.delete(userId);
+        
+        await bot.editMessageText(
+            `✅ *Ссылка обновлена!*\n\n` +
+            `🔗 ${link}`,
+            {
+                chat_id: chatId,
+                message_id: state.menuMessageId,
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '« К баннеру', callback_data: `banner_view_${bannerId}` }
+                    ]]
                 }
-            );
-        });
-    });
-    
-    bot.answerCallbackQuery(query.id);
+            }
+        );
+        
+    } else if (state.action === 'banner_edit_order') {
+        const order = parseInt(msg.text);
+        const bannerId = state.bannerId;
+        
+        if (isNaN(order) || order < 1) {
+            await bot.sendMessage(chatId, '❌ Порядок должен быть положительным числом', {
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '« К баннеру', callback_data: `banner_view_${bannerId}` }
+                    ]]
+                }
+            });
+            userStates.delete(userId);
+            return;
+        }
+        
+        const banners = loadBanners();
+        const banner = banners.find(b => b.id === bannerId);
+        
+        if (banner) {
+            const oldOrder = banner.order;
+            banner.order = order;
+            saveBanners(banners);
+            
+            logAction('EDIT_BANNER_ORDER', userId, { bannerId, oldOrder, newOrder: order });
+            await syncToGitHub(`Изменен порядок баннера #${bannerId}: ${oldOrder} → ${order}`);
+        }
+        
+        userStates.delete(userId);
+        
+        await bot.editMessageText(
+            `✅ *Порядок обновлен!*\n\n` +
+            `📊 Новый порядок: ${order}`,
+            {
+                chat_id: chatId,
+                message_id: state.menuMessageId,
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '« К баннеру', callback_data: `banner_view_${bannerId}` }
+                    ]]
+                }
+            }
+        );
+    }
 }
 
 // Handle delete banner
@@ -1583,14 +1698,25 @@ function handleBannerDeleteConfirm(bot, query, bannerId) {
 // Handle banner callbacks
 function handleBannerCallback(bot, query) {
     const data = query.data;
+    const chatId = query.message.chat.id;
+    const userId = query.from.id;
     
     if (data === 'banner_list') {
+        // Удаляем состояние если есть
+        userStates.delete(userId);
         // Удаляем старое сообщение и отправляем новое
-        bot.deleteMessage(query.message.chat.id, query.message.message_id);
+        bot.deleteMessage(chatId, query.message.message_id);
         handleBannersCommand(bot, { chat: query.message.chat, from: query.from });
         bot.answerCallbackQuery(query.id);
+    } else if (data === 'banner_cancel') {
+        // Отмена операции
+        userStates.delete(userId);
+        bot.deleteMessage(chatId, query.message.message_id);
+        handleBannersCommand(bot, { chat: query.message.chat, from: query.from });
+        bot.answerCallbackQuery(query.id, { text: '❌ Операция отменена' });
     } else if (data.startsWith('banner_view_')) {
         const bannerId = data.replace('banner_view_', '');
+        userStates.delete(userId); // Сброс состояния
         handleBannerView(bot, query, bannerId);
     } else if (data.startsWith('banner_toggle_')) {
         const bannerId = data.replace('banner_toggle_', '');
@@ -1603,7 +1729,93 @@ function handleBannerCallback(bot, query) {
     } else if (data.startsWith('banner_delete_')) {
         const bannerId = data.replace('banner_delete_', '');
         handleBannerDelete(bot, query, bannerId);
+    } else if (data.startsWith('banner_link_')) {
+        const bannerId = data.replace('banner_link_', '');
+        handleBannerLinkEdit(bot, query, parseInt(bannerId));
+    } else if (data.startsWith('banner_order_')) {
+        const bannerId = data.replace('banner_order_', '');
+        handleBannerOrderEdit(bot, query, parseInt(bannerId));
     }
+}
+
+// Handle banner link edit
+function handleBannerLinkEdit(bot, query, bannerId) {
+    const chatId = query.message.chat.id;
+    const userId = query.from.id;
+    
+    if (!isAdmin(userId)) {
+        bot.answerCallbackQuery(query.id, { text: '⛔ Нет доступа' });
+        return;
+    }
+    
+    userStates.set(userId, {
+        action: 'banner_edit_link',
+        bannerId: bannerId,
+        menuMessageId: query.message.message_id
+    });
+    
+    bot.editMessageText(
+        '🔗 *Изменение ссылки баннера*\n\n' +
+        'Отправьте новую ссылку\n' +
+        '_(например: https://insiderplaystation.ru/catalog)_\n\n' +
+        'Или отправьте `-` чтобы удалить ссылку',
+        {
+            chat_id: chatId,
+            message_id: query.message.message_id,
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [[
+                    { text: '❌ Отмена', callback_data: `banner_view_${bannerId}` }
+                ]]
+            }
+        }
+    );
+    
+    bot.answerCallbackQuery(query.id);
+}
+
+// Handle banner order edit
+function handleBannerOrderEdit(bot, query, bannerId) {
+    const chatId = query.message.chat.id;
+    const userId = query.from.id;
+    
+    if (!isAdmin(userId)) {
+        bot.answerCallbackQuery(query.id, { text: '⛔ Нет доступа' });
+        return;
+    }
+    
+    const banners = loadBanners();
+    const banner = banners.find(b => b.id === bannerId);
+    
+    if (!banner) {
+        bot.answerCallbackQuery(query.id, { text: '❌ Баннер не найден' });
+        return;
+    }
+    
+    userStates.set(userId, {
+        action: 'banner_edit_order',
+        bannerId: bannerId,
+        menuMessageId: query.message.message_id
+    });
+    
+    bot.editMessageText(
+        '📊 *Изменение порядка баннера*\n\n' +
+        `Текущий порядок: ${banner.order}\n\n` +
+        'Отправьте новый порядок (число)\n' +
+        '_(чем меньше число, тем выше приоритет)_',
+        {
+            chat_id: chatId,
+            message_id: query.message.message_id,
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [[
+                    { text: '❌ Отмена', callback_data: `banner_view_${bannerId}` }
+                ]]
+            }
+        }
+    );
+    
+    bot.answerCallbackQuery(query.id);
 }
 
 module.exports = {
@@ -1617,6 +1829,8 @@ module.exports = {
     handleResetDiscountsCommand,
     handleBannersCommand,
     handleBannerCallback,
+    handleBannerInput,
+    userStates,
     isAdmin,
     notifyAdminNewOrder,
     logAction

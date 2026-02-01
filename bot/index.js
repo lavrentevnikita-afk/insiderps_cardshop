@@ -12,7 +12,9 @@ const {
     handleBulkDiscountCommand,
     handleResetDiscountsCommand,
     handleBannersCommand,
-    handleBannerCallback
+    handleBannerCallback,
+    handleBannerInput,
+    userStates
 } = require('./adminHandlers');
 
 // Проверка наличия токена
@@ -92,6 +94,20 @@ bot.on('pre_checkout_query', (query) => handlePreCheckoutQuery(bot, query));
 
 // Обработка успешной оплаты
 bot.on('successful_payment', (msg) => handleSuccessfulPayment(bot, msg));
+
+// Обработка обычных текстовых сообщений (для состояний)
+bot.on('message', (msg) => {
+  // Пропускаем команды и другие типы сообщений
+  if (msg.text && msg.text.startsWith('/')) return;
+  if (msg.web_app_data) return;
+  if (msg.successful_payment) return;
+  
+  // Проверяем, есть ли активное состояние у пользователя
+  const userId = msg.from.id;
+  if (userStates.has(userId)) {
+    handleBannerInput(bot, msg);
+  }
+});
 
 // Обработка Web App Data (для keyboard button mini apps)
 bot.on('web_app_data', (msg) => {
