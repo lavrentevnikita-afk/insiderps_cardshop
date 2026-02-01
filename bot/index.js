@@ -32,6 +32,19 @@ bot.on('pre_checkout_query', (query) => handlePreCheckoutQuery(bot, query));
 // Обработка успешной оплаты
 bot.on('successful_payment', (msg) => handleSuccessfulPayment(bot, msg));
 
+// Обработка Web App Data (для attachment menu)
+bot.on('web_app_data', (msg) => {
+  const chatId = msg.chat.id;
+  const data = JSON.parse(msg.web_app_data.data);
+  
+  console.log('📱 Web App Data получена:', data);
+  
+  // Обработка данных из webapp (например, заказ)
+  if (data.type === 'order') {
+    bot.sendMessage(chatId, `✅ Заказ получен!\n\nТовар: ${data.product}\nЦена: ${data.price}₽`);
+  }
+});
+
 // Обработка ошибок
 bot.on('polling_error', (error) => {
   console.error('❌ Ошибка polling:', error.message);
