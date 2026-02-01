@@ -1126,16 +1126,56 @@ body::before {
     background: linear-gradient(135deg, #002868 0%, #0047ab 100%);
 }
 
+.cart-item.region-usa .cart-item-image::before {
+    content: '🇺🇸';
+    font-size: 40px;
+    opacity: 0.15;
+    animation: flagsDiagonal 8s linear infinite;
+    background: none;
+    width: auto;
+    height: auto;
+}
+
 .cart-item.region-poland .cart-item-image {
     background: linear-gradient(180deg, #ffffff 0%, #ffffff 50%, #dc143c 50%, #dc143c 100%);
+}
+
+.cart-item.region-poland .cart-item-image::before {
+    content: '🇵🇱';
+    font-size: 40px;
+    opacity: 0.2;
+    animation: flagsDiagonal 8s linear infinite;
+    background: none;
+    width: auto;
+    height: auto;
 }
 
 .cart-item.region-turkey .cart-item-image {
     background: linear-gradient(135deg, #e30a17 0%, #c4081a 100%);
 }
 
+.cart-item.region-turkey .cart-item-image::before {
+    content: '🇹🇷';
+    font-size: 40px;
+    opacity: 0.15;
+    animation: flagsDiagonal 8s linear infinite;
+    background: none;
+    width: auto;
+    height: auto;
+}
+
 .cart-item.region-india .cart-item-image {
     background: linear-gradient(135deg, #ff9933 0%, #ff6600 100%);
+}
+
+.cart-item.region-india .cart-item-image::before {
+    content: '🇮🇳';
+    font-size: 40px;
+    opacity: 0.15;
+    animation: flagsDiagonal 8s linear infinite;
+    background: none;
+    width: auto;
+    height: auto;
 }
 
 .cart-item-image::before {
