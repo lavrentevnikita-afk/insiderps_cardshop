@@ -654,7 +654,18 @@ async function handleAdminCallback(bot, query) {
             // Обработка редактирования конкретного товара
             if (data.startsWith('edit_product_')) {
                 const productId = data.replace('edit_product_', '');
+                userStates.delete(userId); // Сброс состояния
                 await handleEditProductForm(bot, chatId, userId, productId, messageId);
+            }
+            // Обработка изменения цены товара
+            else if (data.startsWith('product_price_')) {
+                const productId = data.replace('product_price_', '');
+                handleProductPriceEdit(bot, query, productId);
+            }
+            // Обработка изменения скидки товара
+            else if (data.startsWith('product_discount_')) {
+                const productId = data.replace('product_discount_', '');
+                handleProductDiscountEdit(bot, query, productId);
             }
             break;
     }
@@ -736,19 +747,22 @@ async function handleEditProductForm(bot, chatId, userId, productId, messageId =
             return;
         }
         
+        const finalPrice = Math.round(product.price * (1 - product.discount / 100));
+        
         const message = `✏️ *Редактирование товара*\n\n` +
-                       `📦 Товар: ${product.name}\n` +
-                       `💰 Текущая цена: ${product.price}₽\n` +
-                       `🏷 Текущая скидка: ${product.discount}%\n` +
-                       `💵 Валюта: ${product.currency}\n\n` +
-                       `Для изменения отправьте команду:\n\n` +
-                       `\`/setprice ${productId} НОВАЯ_ЦЕНА\`\n` +
-                       `Пример: \`/setprice ${productId} 500\`\n\n` +
-                       `\`/setdiscount ${productId} СКИДКА\`\n` +
-                       `Пример: \`/setdiscount ${productId} 15\``;
+                       `📦 *Товар:* ${product.name}\n` +
+                       `🌍 *Регион:* ${product.region}\n` +
+                       `💵 *Валюта:* ${product.currency}\n\n` +
+                       `💰 *Цена:* ${product.price}₽\n` +
+                       `🏷 *Скидка:* ${product.discount}%\n` +
+                       `💳 *Итоговая цена:* ${finalPrice}₽`;
         
         const keyboard = {
             inline_keyboard: [
+                [
+                    { text: '💰 Изменить цену', callback_data: `product_price_${productId}` },
+                    { text: '🏷 Изменить скидку', callback_data: `product_discount_${productId}` }
+                ],
                 [
                     { text: '« К списку товаров', callback_data: 'admin_edit_product' }
                 ],
@@ -1415,7 +1429,7 @@ function handleAddBanner(bot, query) {
     bot.answerCallbackQuery(query.id);
 }
 
-// Handle banner text input
+// Handle admin text input (banners and products)
 async function handleBannerInput(bot, msg) {
     const userId = msg.from.id;
     const chatId = msg.chat.id;
@@ -1429,6 +1443,127 @@ async function handleBannerInput(bot, msg) {
         await bot.deleteMessage(chatId, msg.message_id);
     } catch (e) {}
     
+    // PRODUCT HANDLERS
+    if (state.action === 'product_edit_price') {
+        const newPrice = parseInt(msg.text);
+        const productId = state.productId;
+        
+        if (isNaN(newPrice) || newPrice <= 0) {
+            await bot.editMessageText(
+                '❌ *Ошибка!*\n\n' +
+                'Цена должна быть положительным числом\n\n' +
+                'Попробуйте еще раз:',
+                {
+                    chat_id: chatId,
+                    message_id: state.menuMessageId,
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: '❌ Отмена', callback_data: `edit_product_${productId}` }
+                        ]]
+                    }
+                }
+            );
+            return;
+        }
+        
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        const productIndex = products.findIndex(p => p.id === productId);
+        
+        if (productIndex !== -1) {
+            const oldPrice = products[productIndex].price;
+            products[productIndex].price = newPrice;
+            fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
+            
+            logAction('SET_PRICE', userId, { productId, oldPrice, newPrice });
+            await syncToGitHub(`Обновлена цена ${productId}: ${oldPrice}₽ → ${newPrice}₽`);
+            
+            userStates.delete(userId);
+            
+            await bot.editMessageText(
+                `✅ *Цена обновлена!*\n\n` +
+                `📦 ${products[productIndex].name}\n` +
+                `💰 Старая цена: ${oldPrice}₽\n` +
+                `💰 Новая цена: ${newPrice}₽\n\n` +
+                `🔄 Изменения синхронизированы с сайтом!`,
+                {
+                    chat_id: chatId,
+                    message_id: state.menuMessageId,
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: '« К товару', callback_data: `edit_product_${productId}` }
+                        ]]
+                    }
+                }
+            );
+        }
+        return;
+    }
+    
+    if (state.action === 'product_edit_discount') {
+        const newDiscount = parseInt(msg.text);
+        const productId = state.productId;
+        
+        if (isNaN(newDiscount) || newDiscount < 0 || newDiscount > 100) {
+            await bot.editMessageText(
+                '❌ *Ошибка!*\n\n' +
+                'Скидка должна быть от 0 до 100\n\n' +
+                'Попробуйте еще раз:',
+                {
+                    chat_id: chatId,
+                    message_id: state.menuMessageId,
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: '❌ Отмена', callback_data: `edit_product_${productId}` }
+                        ]]
+                    }
+                }
+            );
+            return;
+        }
+        
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        const productIndex = products.findIndex(p => p.id === productId);
+        
+        if (productIndex !== -1) {
+            const oldDiscount = products[productIndex].discount;
+            products[productIndex].discount = newDiscount;
+            fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
+            
+            logAction('SET_DISCOUNT', userId, { productId, oldDiscount, newDiscount });
+            await syncToGitHub(`Обновлена скидка ${productId}: ${oldDiscount}% → ${newDiscount}%`);
+            
+            userStates.delete(userId);
+            
+            const finalPrice = Math.round(products[productIndex].price * (1 - newDiscount / 100));
+            
+            await bot.editMessageText(
+                `✅ *Скидка обновлена!*\n\n` +
+                `📦 ${products[productIndex].name}\n` +
+                `🏷 Старая скидка: ${oldDiscount}%\n` +
+                `🏷 Новая скидка: ${newDiscount}%\n` +
+                `💳 Итоговая цена: ${finalPrice}₽\n\n` +
+                `🔄 Изменения синхронизированы с сайтом!`,
+                {
+                    chat_id: chatId,
+                    message_id: state.menuMessageId,
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: '« К товару', callback_data: `edit_product_${productId}` }
+                        ]]
+                    }
+                }
+            );
+        }
+        return;
+    }
+    
+    // BANNER HANDLERS
     if (state.action === 'banner_add_title') {
         const title = msg.text;
         
@@ -1746,6 +1881,98 @@ function handleBannerLinkEdit(bot, query, bannerId) {
             reply_markup: {
                 inline_keyboard: [[
                     { text: '❌ Отмена', callback_data: `banner_view_${bannerId}` }
+                ]]
+            }
+        }
+    );
+    
+    bot.answerCallbackQuery(query.id);
+}
+
+// Handle product price edit
+function handleProductPriceEdit(bot, query, productId) {
+    const chatId = query.message.chat.id;
+    const userId = query.from.id;
+    
+    if (!isAdmin(userId)) {
+        bot.answerCallbackQuery(query.id, { text: '⛔ Нет доступа' });
+        return;
+    }
+    
+    const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+    const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+    const product = products.find(p => p.id === productId);
+    
+    if (!product) {
+        bot.answerCallbackQuery(query.id, { text: '❌ Товар не найден' });
+        return;
+    }
+    
+    userStates.set(userId, {
+        action: 'product_edit_price',
+        productId: productId,
+        menuMessageId: query.message.message_id
+    });
+    
+    bot.editMessageText(
+        '💰 *Изменение цены товара*\n\n' +
+        `📦 ${product.name}\n` +
+        `Текущая цена: ${product.price}₽\n\n` +
+        'Отправьте новую цену (только число)\n' +
+        '_(например: 500)_',
+        {
+            chat_id: chatId,
+            message_id: query.message.message_id,
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [[
+                    { text: '❌ Отмена', callback_data: `edit_product_${productId}` }
+                ]]
+            }
+        }
+    );
+    
+    bot.answerCallbackQuery(query.id);
+}
+
+// Handle product discount edit
+function handleProductDiscountEdit(bot, query, productId) {
+    const chatId = query.message.chat.id;
+    const userId = query.from.id;
+    
+    if (!isAdmin(userId)) {
+        bot.answerCallbackQuery(query.id, { text: '⛔ Нет доступа' });
+        return;
+    }
+    
+    const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+    const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+    const product = products.find(p => p.id === productId);
+    
+    if (!product) {
+        bot.answerCallbackQuery(query.id, { text: '❌ Товар не найден' });
+        return;
+    }
+    
+    userStates.set(userId, {
+        action: 'product_edit_discount',
+        productId: productId,
+        menuMessageId: query.message.message_id
+    });
+    
+    bot.editMessageText(
+        '🏷 *Изменение скидки товара*\n\n' +
+        `📦 ${product.name}\n` +
+        `Текущая скидка: ${product.discount}%\n\n` +
+        'Отправьте новую скидку (от 0 до 100)\n' +
+        '_(например: 15)_',
+        {
+            chat_id: chatId,
+            message_id: query.message.message_id,
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [[
+                    { text: '❌ Отмена', callback_data: `edit_product_${productId}` }
                 ]]
             }
         }
