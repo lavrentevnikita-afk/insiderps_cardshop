@@ -724,7 +724,11 @@ async function handleAdminCallback(bot, query) {
             await handleStatsExport(bot, chatId, userId);
             break;
         case 'admin_add_product':
+            await handleAddProductInit(bot, chatId, userId, messageId);
+            break;
         case 'admin_delete_product':
+            await handleDeleteProductList(bot, chatId, userId, messageId);
+            break;
         case 'admin_view_keys':
         case 'admin_view_orders':
             await bot.editMessageText('⚠️ Функция в разработке', {
@@ -757,6 +761,25 @@ async function handleAdminCallback(bot, query) {
             else if (data.startsWith('product_discount_')) {
                 const productId = data.replace('product_discount_', '');
                 handleProductDiscountEdit(bot, query, productId);
+            }
+            // Обработка подтверждения удаления товара
+            else if (data.startsWith('delete_product_confirm_')) {
+                const productId = data.replace('delete_product_confirm_', '');
+                await handleDeleteProductConfirm(bot, chatId, userId, productId, messageId);
+            }
+            // Обработка отмены удаления товара
+            else if (data.startsWith('delete_product_cancel')) {
+                await handleDeleteProductList(bot, chatId, userId, messageId);
+            }
+            // Обработка удаления товара
+            else if (data.startsWith('delete_product_')) {
+                const productId = data.replace('delete_product_', '');
+                await handleDeleteProductCallback(bot, query, productId);
+            }
+            // Обработка выбора региона при добавлении товара
+            else if (data.startsWith('addproduct_region_')) {
+                const region = data.replace('addproduct_region_', '');
+                await handleAddProductRegion(bot, chatId, userId, region);
             }
             break;
     }
@@ -2330,6 +2353,610 @@ async function handleBulkImportCommand(bot, msg) {
     });
 }
 
+// Add new product - initialization
+async function handleAddProductInit(bot, chatId, userId, messageId = null) {
+    requireAdmin(bot, chatId, userId, async () => {
+        // Сохраняем состояние пользователя
+        userStates.set(userId, {
+            action: 'add_product',
+            step: 'id',
+            data: {}
+        });
+        
+        const message = '➕ *Добавление нового товара*\n\n' +
+                       'Шаг 1/7: Введите уникальный ID товара\n' +
+                       'Пример: `us_100`, `tr_500`, `test_10`\n\n' +
+                       '💡 ID должен быть уникальным и содержать только латинские буквы, цифры и символ подчеркивания';
+        
+        const keyboard = {
+            inline_keyboard: [[
+                { text: '« Отмена', callback_data: 'admin_products' }
+            ]]
+        };
+        
+        if (messageId) {
+            await bot.editMessageText(message, {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        } else {
+            await bot.sendMessage(chatId, message, {
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        }
+    });
+}
+
+// Handle adding new product steps
+async function handleAddProductInput(bot, msg) {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const text = msg.text;
+    
+    if (!userStates.has(userId)) return;
+    
+    const state = userStates.get(userId);
+    if (state.action !== 'add_product') return;
+    
+    requireAdmin(bot, chatId, userId, async () => {
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        
+        switch (state.step) {
+            case 'id':
+                // Проверка ID на уникальность и формат
+                if (!/^[a-z0-9_]+$/.test(text)) {
+                    await bot.sendMessage(chatId, '❌ ID может содержать только латинские буквы в нижнем регистре, цифры и символ подчеркивания');
+                    return;
+                }
+                
+                if (products.find(p => p.id === text)) {
+                    await bot.sendMessage(chatId, '❌ Товар с таким ID уже существует');
+                    return;
+                }
+                
+                state.data.id = text;
+                state.step = 'name';
+                userStates.set(userId, state);
+                
+                await bot.sendMessage(chatId, 
+                    '✅ ID сохранён!\n\n' +
+                    'Шаг 2/7: Введите название товара\n' +
+                    'Пример: `10$ (Америка)`, `500₺ (Турция)`',
+                    { parse_mode: 'Markdown' }
+                );
+                break;
+                
+            case 'name':
+                state.data.name = text;
+                state.step = 'region';
+                userStates.set(userId, state);
+                
+                const regionKeyboard = {
+                    inline_keyboard: [
+                        [
+                            { text: '🇺🇸 США', callback_data: 'addproduct_region_USA' },
+                            { text: '🇮🇳 Индия', callback_data: 'addproduct_region_India' }
+                        ],
+                        [
+                            { text: '🇵🇱 Польша', callback_data: 'addproduct_region_Poland' },
+                            { text: '🇹🇷 Турция', callback_data: 'addproduct_region_Turkey' }
+                        ],
+                        [
+                            { text: '« Отмена', callback_data: 'admin_products' }
+                        ]
+                    ]
+                };
+                
+                await bot.sendMessage(chatId, 
+                    '✅ Название сохранено!\n\n' +
+                    'Шаг 3/7: Выберите регион товара:',
+                    { 
+                        parse_mode: 'Markdown',
+                        reply_markup: regionKeyboard
+                    }
+                );
+                break;
+                
+            case 'currency':
+                state.data.currency = text.toUpperCase();
+                state.step = 'price';
+                userStates.set(userId, state);
+                
+                await bot.sendMessage(chatId, 
+                    '✅ Валюта сохранена!\n\n' +
+                    'Шаг 5/7: Введите цену товара в рублях\n' +
+                    'Пример: `500`, `1000`, `2500`\n\n' +
+                    '💡 Только целое число',
+                    { parse_mode: 'Markdown' }
+                );
+                break;
+                
+            case 'price':
+                const price = parseInt(text);
+                if (isNaN(price) || price <= 0) {
+                    await bot.sendMessage(chatId, '❌ Цена должна быть положительным числом');
+                    return;
+                }
+                
+                state.data.price = price;
+                state.step = 'discount';
+                userStates.set(userId, state);
+                
+                await bot.sendMessage(chatId, 
+                    '✅ Цена сохранена!\n\n' +
+                    'Шаг 6/7: Введите скидку (0-100)\n' +
+                    'Пример: `0`, `10`, `25`, `50`\n\n' +
+                    '💡 0 = без скидки',
+                    { parse_mode: 'Markdown' }
+                );
+                break;
+                
+            case 'discount':
+                const discount = parseInt(text);
+                if (isNaN(discount) || discount < 0 || discount > 100) {
+                    await bot.sendMessage(chatId, '❌ Скидка должна быть от 0 до 100');
+                    return;
+                }
+                
+                state.data.discount = discount;
+                state.step = 'description';
+                userStates.set(userId, state);
+                
+                await bot.sendMessage(chatId, 
+                    '✅ Скидка сохранена!\n\n' +
+                    'Шаг 7/7: Введите описание товара\n' +
+                    'Пример: `Карта пополнения PlayStation Store на 10$ для аккаунта региона США. Моментальная доставка после оплаты.`',
+                    { parse_mode: 'Markdown' }
+                );
+                break;
+                
+            case 'description':
+                state.data.description = text;
+                
+                // Формируем URL изображения по умолчанию
+                const currency = state.data.currency;
+                let imageUrl = 'https://i.imgur.com/pscard.png';
+                
+                if (currency === 'USD') {
+                    imageUrl = 'https://i.imgur.com/pscard10.png';
+                } else if (currency === 'INR') {
+                    imageUrl = 'https://i.imgur.com/pscard.png';
+                } else if (currency === 'PLN') {
+                    imageUrl = 'https://i.imgur.com/pscard.png';
+                } else if (currency === 'TRY') {
+                    imageUrl = 'https://i.imgur.com/pscard.png';
+                }
+                
+                state.data.image = imageUrl;
+                
+                // Создаем новый товар
+                const newProduct = {
+                    id: state.data.id,
+                    name: state.data.name,
+                    region: state.data.region,
+                    currency: state.data.currency,
+                    price: state.data.price,
+                    discount: state.data.discount,
+                    description: state.data.description,
+                    image: state.data.image
+                };
+                
+                products.push(newProduct);
+                fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
+                
+                // Логируем действие
+                logAction('ADD_PRODUCT', userId, { productId: newProduct.id, productName: newProduct.name });
+                
+                // Синхронизируем с GitHub
+                const synced = await syncToGitHub(`Добавлен новый товар: ${newProduct.name} (${newProduct.id})`);
+                const syncStatus = synced ? '\n\n🔄 Изменения синхронизированы с сайтом!' : '\n\n⚠️ Изменения сохранены локально';
+                
+                // Очищаем состояние
+                userStates.delete(userId);
+                
+                const finalPrice = Math.round(newProduct.price * (1 - newProduct.discount / 100));
+                
+                await bot.sendMessage(chatId, 
+                    '✅ *Товар успешно добавлен!*\n\n' +
+                    `📦 ID: \`${newProduct.id}\`\n` +
+                    `📝 Название: ${newProduct.name}\n` +
+                    `🌍 Регион: ${newProduct.region}\n` +
+                    `💵 Валюта: ${newProduct.currency}\n` +
+                    `💰 Цена: ${newProduct.price}₽\n` +
+                    `🏷 Скидка: ${newProduct.discount}%\n` +
+                    `💳 Итого: ${finalPrice}₽` +
+                    syncStatus +
+                    '\n\n💡 Теперь вы можете добавить ключи командой `/addkey ' + newProduct.id + '`',
+                    { parse_mode: 'Markdown' }
+                );
+                break;
+        }
+    });
+}
+
+// Handle region selection when adding product
+async function handleAddProductRegion(bot, chatId, userId, region) {
+    if (!userStates.has(userId)) return;
+    
+    const state = userStates.get(userId);
+    if (state.action !== 'add_product' || state.step !== 'region') return;
+    
+    requireAdmin(bot, chatId, userId, async () => {
+        state.data.region = region;
+        state.step = 'currency';
+        userStates.set(userId, state);
+        
+        // Предлагаем валюту по умолчанию
+        let defaultCurrency = 'USD';
+        if (region === 'India') defaultCurrency = 'INR';
+        else if (region === 'Poland') defaultCurrency = 'PLN';
+        else if (region === 'Turkey') defaultCurrency = 'TRY';
+        
+        await bot.sendMessage(chatId, 
+            `✅ Регион сохранён!\n\n` +
+            `Шаг 4/7: Введите валюту товара\n` +
+            `Рекомендуется: \`${defaultCurrency}\`\n\n` +
+            `Или введите свою (USD, EUR, INR, PLN, TRY, TEST и т.д.)`,
+            { parse_mode: 'Markdown' }
+        );
+    });
+}
+
+// Delete product - show list
+async function handleDeleteProductList(bot, chatId, userId, messageId = null) {
+    requireAdmin(bot, chatId, userId, async () => {
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        
+        const keyboard = {
+            inline_keyboard: []
+        };
+        
+        // Группируем по регионам
+        const regions = {
+            'USA': { name: '🇺🇸 США', products: [] },
+            'India': { name: '🇮🇳 Индия', products: [] },
+            'Poland': { name: '🇵🇱 Польша', products: [] },
+            'Turkey': { name: '🇹🇷 Турция', products: [] }
+        };
+        
+        products.forEach(p => {
+            if (regions[p.region]) {
+                regions[p.region].products.push(p);
+            }
+        });
+        
+        Object.keys(regions).forEach(regionKey => {
+            const region = regions[regionKey];
+            if (region.products.length > 0) {
+                keyboard.inline_keyboard.push([
+                    { text: region.name, callback_data: 'noop' }
+                ]);
+                region.products.forEach(p => {
+                    keyboard.inline_keyboard.push([
+                        { text: `🗑 ${p.name}`, callback_data: `delete_product_${p.id}` }
+                    ]);
+                });
+            }
+        });
+        
+        keyboard.inline_keyboard.push([
+            { text: '« Назад', callback_data: 'admin_products' }
+        ]);
+        
+        if (messageId) {
+            await bot.editMessageText('🗑 *Выберите товар для удаления:*\n\n⚠️ Это действие нельзя отменить!', {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            });
+        } else {
+            await bot.sendMessage(chatId, 
+                '🗑 *Выберите товар для удаления:*\n\n⚠️ Это действие нельзя отменить!',
+                {
+                    parse_mode: 'Markdown',
+                    reply_markup: keyboard
+                }
+            );
+        }
+    });
+}
+
+// Handle delete product callback
+async function handleDeleteProductCallback(bot, query, productId) {
+    const chatId = query.message.chat.id;
+    const userId = query.from.id;
+    const messageId = query.message.message_id;
+    
+    requireAdmin(bot, chatId, userId, async () => {
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        const product = products.find(p => p.id === productId);
+        
+        if (!product) {
+            await bot.editMessageText('❌ Товар не найден', {
+                chat_id: chatId,
+                message_id: messageId,
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '« Назад', callback_data: 'admin_products' }
+                    ]]
+                }
+            });
+            return;
+        }
+        
+        const message = `🗑 *Подтвердите удаление товара*\n\n` +
+                       `📦 ${product.name}\n` +
+                       `🆔 ID: \`${product.id}\`\n` +
+                       `🌍 Регион: ${product.region}\n` +
+                       `💰 Цена: ${product.price}₽\n\n` +
+                       `⚠️ *ВНИМАНИЕ!* Товар будет удалён безвозвратно.\nВсе связанные ключи останутся в базе.`;
+        
+        const keyboard = {
+            inline_keyboard: [
+                [
+                    { text: '✅ Да, удалить', callback_data: `delete_product_confirm_${productId}` }
+                ],
+                [
+                    { text: '« Отмена', callback_data: 'delete_product_cancel' }
+                ]
+            ]
+        };
+        
+        await bot.editMessageText(message, {
+            chat_id: chatId,
+            message_id: messageId,
+            parse_mode: 'Markdown',
+            reply_markup: keyboard
+        });
+    });
+}
+
+// Confirm delete product
+async function handleDeleteProductConfirm(bot, chatId, userId, productId, messageId) {
+    requireAdmin(bot, chatId, userId, async () => {
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        const productIndex = products.findIndex(p => p.id === productId);
+        
+        if (productIndex === -1) {
+            await bot.editMessageText('❌ Товар не найден', {
+                chat_id: chatId,
+                message_id: messageId,
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '« Назад', callback_data: 'admin_products' }
+                    ]]
+                }
+            });
+            return;
+        }
+        
+        const deletedProduct = products[productIndex];
+        products.splice(productIndex, 1);
+        
+        fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
+        
+        // Логируем действие
+        logAction('DELETE_PRODUCT', userId, { 
+            productId: deletedProduct.id, 
+            productName: deletedProduct.name 
+        });
+        
+        // Синхронизируем с GitHub
+        const synced = await syncToGitHub(`Удалён товар: ${deletedProduct.name} (${deletedProduct.id})`);
+        const syncStatus = synced ? '\n\n🔄 Изменения синхронизированы с сайтом!' : '\n\n⚠️ Изменения сохранены локально';
+        
+        await bot.editMessageText(
+            `✅ *Товар успешно удалён!*\n\n` +
+            `📦 ${deletedProduct.name}\n` +
+            `🆔 ID: \`${deletedProduct.id}\`` +
+            syncStatus,
+            {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '« К товарам', callback_data: 'admin_products' }
+                    ]]
+                }
+            }
+        );
+    });
+}
+
+// Handle product price edit with buttons
+function handleProductPriceEdit(bot, query, productId) {
+    const chatId = query.message.chat.id;
+    const userId = query.from.id;
+    const messageId = query.message.message_id;
+    
+    requireAdmin(bot, chatId, userId, async () => {
+        // Сохраняем состояние
+        userStates.set(userId, {
+            action: 'edit_price',
+            productId: productId
+        });
+        
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        const product = products.find(p => p.id === productId);
+        
+        if (!product) {
+            await bot.editMessageText('❌ Товар не найден', {
+                chat_id: chatId,
+                message_id: messageId,
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '« Назад', callback_data: 'admin_edit_product' }
+                    ]]
+                }
+            });
+            return;
+        }
+        
+        await bot.editMessageText(
+            `💰 *Изменение цены товара*\n\n` +
+            `📦 ${product.name}\n` +
+            `💰 Текущая цена: ${product.price}₽\n\n` +
+            `Введите новую цену (в рублях):`,
+            {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '« Отмена', callback_data: `edit_product_${productId}` }
+                    ]]
+                }
+            }
+        );
+    });
+}
+
+// Handle product discount edit with buttons
+function handleProductDiscountEdit(bot, query, productId) {
+    const chatId = query.message.chat.id;
+    const userId = query.from.id;
+    const messageId = query.message.message_id;
+    
+    requireAdmin(bot, chatId, userId, async () => {
+        // Сохраняем состояние
+        userStates.set(userId, {
+            action: 'edit_discount',
+            productId: productId
+        });
+        
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        const product = products.find(p => p.id === productId);
+        
+        if (!product) {
+            await bot.editMessageText('❌ Товар не найден', {
+                chat_id: chatId,
+                message_id: messageId,
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '« Назад', callback_data: 'admin_edit_product' }
+                    ]]
+                }
+            });
+            return;
+        }
+        
+        await bot.editMessageText(
+            `🏷 *Изменение скидки товара*\n\n` +
+            `📦 ${product.name}\n` +
+            `🏷 Текущая скидка: ${product.discount}%\n` +
+            `💰 Цена со скидкой: ${Math.round(product.price * (1 - product.discount / 100))}₽\n\n` +
+            `Введите новую скидку (0-100):`,
+            {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '« Отмена', callback_data: `edit_product_${productId}` }
+                    ]]
+                }
+            }
+        );
+    });
+}
+
+// Handle price/discount input from state
+async function handleProductEditInput(bot, msg) {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const text = msg.text;
+    
+    if (!userStates.has(userId)) return;
+    
+    const state = userStates.get(userId);
+    if (state.action !== 'edit_price' && state.action !== 'edit_discount') return;
+    
+    requireAdmin(bot, chatId, userId, async () => {
+        const productsPath = path.join(__dirname, '..', 'data', 'products.json');
+        const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        const productIndex = products.findIndex(p => p.id === state.productId);
+        
+        if (productIndex === -1) {
+            await bot.sendMessage(chatId, '❌ Товар не найден');
+            userStates.delete(userId);
+            return;
+        }
+        
+        const product = products[productIndex];
+        
+        if (state.action === 'edit_price') {
+            const newPrice = parseInt(text);
+            
+            if (isNaN(newPrice) || newPrice <= 0) {
+                await bot.sendMessage(chatId, '❌ Цена должна быть положительным числом');
+                return;
+            }
+            
+            const oldPrice = product.price;
+            products[productIndex].price = newPrice;
+            
+            fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
+            
+            logAction('SET_PRICE', userId, { productId: state.productId, oldPrice, newPrice });
+            
+            const synced = await syncToGitHub(`Обновлена цена ${state.productId}: ${oldPrice}₽ → ${newPrice}₽`);
+            const syncStatus = synced ? '\n\n🔄 Изменения синхронизированы с сайтом!' : '\n\n⚠️ Изменения сохранены локально';
+            
+            await bot.sendMessage(chatId, 
+                `✅ *Цена обновлена!*\n\n` +
+                `📦 ${product.name}\n` +
+                `💰 ${oldPrice}₽ → ${newPrice}₽` +
+                syncStatus,
+                { parse_mode: 'Markdown' }
+            );
+            
+            userStates.delete(userId);
+            
+        } else if (state.action === 'edit_discount') {
+            const newDiscount = parseInt(text);
+            
+            if (isNaN(newDiscount) || newDiscount < 0 || newDiscount > 100) {
+                await bot.sendMessage(chatId, '❌ Скидка должна быть от 0 до 100');
+                return;
+            }
+            
+            const oldDiscount = product.discount;
+            products[productIndex].discount = newDiscount;
+            
+            fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
+            
+            logAction('SET_DISCOUNT', userId, { productId: state.productId, oldDiscount, newDiscount });
+            
+            const synced = await syncToGitHub(`Обновлена скидка ${state.productId}: ${oldDiscount}% → ${newDiscount}%`);
+            const syncStatus = synced ? '\n\n🔄 Изменения синхронизированы с сайтом!' : '\n\n⚠️ Изменения сохранены локально';
+            
+            const finalPrice = Math.round(product.price * (1 - newDiscount / 100));
+            
+            await bot.sendMessage(chatId, 
+                `✅ *Скидка обновлена!*\n\n` +
+                `📦 ${product.name}\n` +
+                `🏷 ${oldDiscount}% → ${newDiscount}%\n` +
+                `💳 Цена со скидкой: ${finalPrice}₽` +
+                syncStatus,
+                { parse_mode: 'Markdown' }
+            );
+            
+            userStates.delete(userId);
+        }
+    });
+}
+
 module.exports = {
     handleAdminCommand,
     handleAdminCallback,
@@ -2344,6 +2971,8 @@ module.exports = {
     handleBannerInput,
     handleCheckStockCommand,
     handleBulkImportCommand,
+    handleAddProductInput,
+    handleProductEditInput,
     userStates,
     isAdmin,
     notifyAdminNewOrder,

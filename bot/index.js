@@ -16,6 +16,8 @@ const {
     handleBannerInput,
     handleCheckStockCommand,
     handleBulkImportCommand,
+    handleAddProductInput,
+    handleProductEditInput,
     userStates
 } = require('./adminHandlers');
 
@@ -86,6 +88,8 @@ bot.onText(/\/bulkimport/, (msg) => handleBulkImportCommand(bot, msg));
 bot.on('callback_query', async (query) => {
   // Проверяем, это админский callback или обычный
   if (query.data.startsWith('admin_') || query.data.startsWith('edit_product_') || 
+      query.data.startsWith('product_price_') || query.data.startsWith('product_discount_') ||
+      query.data.startsWith('delete_product_') || query.data.startsWith('addproduct_region_') ||
       query.data.startsWith('banner_') || query.data.startsWith('stats_') || query.data === 'noop') {
     if (query.data.startsWith('banner_')) {
       await handleBannerCallback(bot, query);
@@ -118,7 +122,16 @@ bot.on('message', (msg) => {
   // Проверяем, есть ли активное состояние у пользователя
   const userId = msg.from.id;
   if (userStates.has(userId)) {
-    handleBannerInput(bot, msg);
+    const state = userStates.get(userId);
+    
+    // Маршрутизация по типу действия
+    if (state.action === 'add_product') {
+      handleAddProductInput(bot, msg);
+    } else if (state.action === 'edit_price' || state.action === 'edit_discount') {
+      handleProductEditInput(bot, msg);
+    } else {
+      handleBannerInput(bot, msg);
+    }
   }
 });
 
