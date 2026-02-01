@@ -57,25 +57,52 @@
                 <!-- Banners will be loaded here -->
             </div>
 
+            <!-- Welcome Block -->
+            <section class="section welcome-section">
+                <div class="welcome-card">
+                    <div class="welcome-icon">🎮</div>
+                    <h2 class="welcome-title">Добро пожаловать в INSIDER PlayStation</h2>
+                    <p class="welcome-text">Карты пополнения PlayStation Store для всех регионов. Моментальная доставка ключей на email.</p>
+                    <div class="welcome-features">
+                        <div class="welcome-feature">
+                            <span class="feature-emoji">⚡</span>
+                            <span>Быстро</span>
+                        </div>
+                        <div class="welcome-feature">
+                            <span class="feature-emoji">🔒</span>
+                            <span>Надёжно</span>
+                        </div>
+                        <div class="welcome-feature">
+                            <span class="feature-emoji">💳</span>
+                            <span>Удобно</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- Regions -->
             <section class="section">
-                <h2 class="section-title">Регионы</h2>
+                <h2 class="section-title">Выберите регион</h2>
                 <div class="regions-grid">
                     <div class="region-card" onclick="app.showCatalog('usa')">
                         <div class="region-icon">🇺🇸</div>
                         <span>Америка</span>
+                        <small class="region-currency">USD</small>
                     </div>
                     <div class="region-card" onclick="app.showCatalog('india')">
                         <div class="region-icon">🇮🇳</div>
                         <span>Индия</span>
+                        <small class="region-currency">INR</small>
                     </div>
                     <div class="region-card" onclick="app.showCatalog('poland')">
                         <div class="region-icon">🇵🇱</div>
                         <span>Польша</span>
+                        <small class="region-currency">PLN</small>
                     </div>
                     <div class="region-card" onclick="app.showCatalog('turkey')">
                         <div class="region-icon">🇹🇷</div>
                         <span>Турция</span>
+                        <small class="region-currency">TRY</small>
                     </div>
                 </div>
             </section>
@@ -85,6 +112,33 @@
                 <h2 class="section-title">Популярное</h2>
                 <div class="popular-grid" id="popular-products">
                     <!-- Popular products will be loaded here -->
+                </div>
+            </section>
+
+            <!-- Benefits Section -->
+            <section class="section benefits-section">
+                <h2 class="section-title">Почему выбирают нас</h2>
+                <div class="benefits-grid">
+                    <div class="benefit-card">
+                        <div class="benefit-icon">⚡</div>
+                        <h3>Моментальная доставка</h3>
+                        <p>Ключи приходят на email сразу после оплаты</p>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="benefit-icon">✅</div>
+                        <h3>100% гарантия</h3>
+                        <p>Все ключи проверены и работают</p>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="benefit-icon">💬</div>
+                        <h3>Поддержка 24/7</h3>
+                        <p>Всегда на связи в Telegram</p>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="benefit-icon">🌍</div>
+                        <h3>Все регионы</h3>
+                        <p>Карты для США, Индии, Польши и Турции</p>
+                    </div>
                 </div>
             </section>
         </div>
