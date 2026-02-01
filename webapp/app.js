@@ -17,6 +17,7 @@ const app = {
     currentRegion: null,
     currentProduct: null,
     previousPage: null,
+    currentSort: 'default',
     cart: JSON.parse(localStorage.getItem('cart') || '[]'),
     promoBanners: [
         {
@@ -43,6 +44,9 @@ const app = {
 
 // Load products from API
 async function loadProducts() {
+    // Show skeletons
+    showSkeletons();
+    
     try {
         const response = await fetch('/api/products');
         if (!response.ok) throw new Error('API not available');
@@ -98,6 +102,9 @@ async function loadProducts() {
 
 // Initialize app
 async function init() {
+    // Initialize theme
+    initTheme();
+    
     await loadProducts(); // Загружаем товары с сервера
     loadPromoBanners();
     loadPopularProducts();
@@ -181,6 +188,7 @@ app.showPage = function(pageId) {
 // Show catalog for region
 app.showCatalog = function(region) {
     app.currentRegion = region;
+    app.currentSort = 'default';
     app.showPage('catalog');
     
     const regionNames = {
@@ -191,12 +199,43 @@ app.showCatalog = function(region) {
     };
     
     document.getElementById('catalog-title').textContent = regionNames[region];
+    document.getElementById('sort-select').value = 'default';
     
-    const products = app.products[region];
+    renderCatalog();
+};
+
+// Render catalog with current sort
+function renderCatalog() {
+    const products = getSortedProducts(app.products[app.currentRegion]);
     const container = document.getElementById('catalog-products');
     container.innerHTML = products.map(product => createProductCard(product)).join('');
     animateProductCards();
+}
+
+// Sort products
+app.sortProducts = function(sortType) {
+    app.currentSort = sortType;
+    renderCatalog();
 };
+
+// Get sorted products
+function getSortedProducts(products) {
+    const sorted = [...products];
+    
+    switch(app.currentSort) {
+        case 'price-asc':
+            return sorted.sort((a, b) => a.price - b.price);
+        case 'price-desc':
+            return sorted.sort((a, b) => b.price - a.price);
+        case 'discount':
+            return sorted.sort((a, b) => b.discount - a.discount);
+        case 'popular':
+            // Mock popularity by price (higher price = more popular for demo)
+            return sorted.sort((a, b) => b.price - a.price);
+        default:
+            return sorted;
+    }
+}
 
 // Show product detail
 app.showProduct = function(productId) {
@@ -559,4 +598,116 @@ function animateProductCards() {
     cards.forEach((card, index) => {
         card.style.animationDelay = `${index * 0.1}s`;
     });
+}
+
+// Show skeleton loaders
+function showSkeletons() {
+    const popularContainer = document.getElementById('popular-products');
+    const skeletonHTML = `
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+    `;
+    popularContainer.innerHTML = skeletonHTML;
+}
+
+// Theme management
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+    }
+}
+
+app.toggleTheme = function() {
+    document.body.classList.toggle('light-theme');
+    const isLight = document.body.classList.contains('light-theme');
+    localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    
+    if (tg.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred('medium');
+    }
+};
+
+// Load orders history
+app.loadOrders = async function() {
+    const emailInput = document.getElementById('orders-email');
+    const email = emailInput.value.trim();
+    
+    if (!email || !email.includes('@')) {
+        if (tg.showAlert) {
+            tg.showAlert('Введите корректный email');
+        } else {
+            alert('Введите корректный email');
+        }
+        return;
+    }
+    
+    const ordersList = document.getElementById('orders-list');
+    ordersList.innerHTML = '<div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div>';
+    
+    try {
+        const response = await fetch(`/api/orders?email=${encodeURIComponent(email)}`);
+        const data = await response.json();
+        
+        if (data.orders && data.orders.length > 0) {
+            ordersList.innerHTML = data.orders.map(order => createOrderCard(order)).join('');
+        } else {
+            ordersList.innerHTML = `
+                <div class="no-orders">
+                    <div class="no-orders-icon">📦</div>
+                    <div class="no-orders-text">Заказы не найдены</div>
+                    <div class="no-orders-subtext">Для этого email пока нет заказов</div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки заказов:', error);
+        ordersList.innerHTML = `
+            <div class="no-orders">
+                <div class="no-orders-icon">❌</div>
+                <div class="no-orders-text">Ошибка загрузки</div>
+                <div class="no-orders-subtext">Попробуйте позже</div>
+            </div>
+        `;
+    }
+};
+
+// Create order card HTML
+function createOrderCard(order) {
+    const date = new Date(order.timestamp).toLocaleDateString('ru-RU', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    
+    const status = order.status || 'completed';
+    const statusText = status === 'completed' ? 'Выполнен' : 'В обработке';
+    
+    return `
+        <div class="order-item">
+            <div class="order-header">
+                <div>
+                    <div class="order-id">Заказ #${order.id || order.timestamp}</div>
+                    <div class="order-date">${date}</div>
+                </div>
+                <div class="order-status ${status}">${statusText}</div>
+            </div>
+            <div class="order-products">
+                ${order.items.map(item => `
+                    <div class="order-product">
+                        <span class="order-product-name">${item.name} x${item.quantity}</span>
+                        <span class="order-product-price">${item.price * item.quantity}₽</span>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="order-total">
+                <span class="order-total-label">Итого:</span>
+                <span class="order-total-amount">${order.total}₽</span>
+            </div>
+        </div>
+    `;
 }

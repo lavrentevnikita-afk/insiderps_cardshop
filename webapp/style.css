@@ -18,6 +18,20 @@
     --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
+/* Light theme variables */
+body.light-theme {
+    --primary-blue: #0070d1;
+    --secondary-blue: #0058a3;
+    --accent-blue: #00a7e1;
+    --dark-bg: #ffffff;
+    --card-bg: #f6f8fa;
+    --text-primary: #24292f;
+    --text-secondary: #57606a;
+    --border-color: #d0d7de;
+    --success: #1a7f37;
+    --danger: #d1242f;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -94,6 +108,39 @@ body::before {
 
 .logo:hover {
     background: rgba(0, 167, 225, 0.05);
+}
+
+.nav-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.orders-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-normal) var(--ease-smooth);
+    border-radius: 12px;
+}
+
+.orders-icon:hover {
+    background: rgba(0, 167, 225, 0.1);
+    transform: scale(1.1);
+}
+
+.orders-icon svg {
+    width: 24px;
+    height: 24px;
+    stroke: var(--text-primary);
+    transition: all var(--transition-normal);
+}
+
+.orders-icon:hover svg {
+    stroke: var(--accent-blue);
 }
 
 .ps-logo {
@@ -1231,4 +1278,362 @@ body::before {
     .promo-banner p {
         font-size: 14px;
     }
+}
+
+/* ===========================
+   SKELETON LOADERS
+   =========================== */
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--card-bg) 25%,
+        var(--border-color) 50%,
+        var(--card-bg) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+    border-radius: 12px;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.skeleton-card {
+    width: 100%;
+    height: 300px;
+    border-radius: 16px;
+}
+
+.skeleton-text {
+    height: 20px;
+    margin: 10px 0;
+    border-radius: 8px;
+}
+
+.skeleton-text.title {
+    height: 24px;
+    width: 70%;
+}
+
+.skeleton-text.subtitle {
+    height: 18px;
+    width: 50%;
+}
+
+.skeleton-banner {
+    width: 100%;
+    height: 180px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+}
+
+/* ===========================
+   THEME TOGGLE
+   =========================== */
+.theme-toggle {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    background: var(--primary-blue);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 112, 209, 0.3);
+    z-index: 999;
+    transition: all var(--transition-normal) var(--ease-smooth);
+    border: 2px solid var(--border-color);
+}
+
+.theme-toggle:hover {
+    transform: scale(1.1) rotate(15deg);
+    box-shadow: 0 6px 20px rgba(0, 112, 209, 0.5);
+}
+
+.theme-toggle:active {
+    transform: scale(0.95);
+}
+
+.theme-toggle svg {
+    width: 28px;
+    height: 28px;
+    fill: white;
+    transition: all var(--transition-normal);
+}
+
+.theme-toggle .moon-icon {
+    display: none;
+}
+
+body.light-theme .theme-toggle .sun-icon {
+    display: none;
+}
+
+body.light-theme .theme-toggle .moon-icon {
+    display: block;
+}
+
+body.light-theme .theme-toggle {
+    background: var(--dark-bg);
+    border-color: var(--border-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .theme-toggle svg {
+    fill: var(--text-primary);
+}
+
+/* ===========================
+   FILTERS & SORT
+   =========================== */
+.catalog-controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    padding: 0 20px;
+}
+
+.control-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.control-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.filter-btn, .sort-btn {
+    padding: 10px 18px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast) var(--ease-smooth);
+    white-space: nowrap;
+}
+
+.filter-btn:hover, .sort-btn:hover {
+    background: var(--primary-blue);
+    border-color: var(--primary-blue);
+    transform: translateY(-2px);
+}
+
+.filter-btn.active, .sort-btn.active {
+    background: var(--primary-blue);
+    border-color: var(--primary-blue);
+    color: white;
+}
+
+.sort-select {
+    padding: 10px 16px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    outline: none;
+}
+
+.sort-select:hover {
+    border-color: var(--primary-blue);
+}
+
+.sort-select:focus {
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(0, 112, 209, 0.1);
+}
+
+/* ===========================
+   ORDERS HISTORY PAGE
+   =========================== */
+.orders-history {
+    padding: 24px 20px;
+}
+
+.email-lookup {
+    background: var(--card-bg);
+    padding: 24px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    border: 1px solid var(--border-color);
+}
+
+.email-lookup h3 {
+    margin-bottom: 16px;
+    font-size: 18px;
+}
+
+.email-input-group {
+    display: flex;
+    gap: 12px;
+}
+
+.email-input-group input {
+    flex: 1;
+    padding: 14px 18px;
+    background: var(--dark-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 16px;
+    transition: all var(--transition-fast);
+}
+
+.email-input-group input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(0, 112, 209, 0.1);
+}
+
+.email-input-group button {
+    padding: 14px 28px;
+    background: var(--primary-blue);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.email-input-group button:hover {
+    background: var(--secondary-blue);
+    transform: translateY(-2px);
+}
+
+.email-input-group button:active {
+    transform: translateY(0);
+}
+
+.order-item {
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 16px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-color);
+    transition: all var(--transition-normal);
+}
+
+.order-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 167, 225, 0.15);
+}
+
+.order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.order-id {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-family: 'Courier New', monospace;
+}
+
+.order-date {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.order-status {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.order-status.completed {
+    background: rgba(63, 185, 80, 0.1);
+    color: var(--success);
+}
+
+.order-status.pending {
+    background: rgba(255, 191, 0, 0.1);
+    color: #ffbf00;
+}
+
+.order-products {
+    margin: 12px 0;
+}
+
+.order-product {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+}
+
+.order-product-name {
+    color: var(--text-primary);
+}
+
+.order-product-price {
+    color: var(--primary-blue);
+    font-weight: 600;
+}
+
+.order-total {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.order-total-label {
+    color: var(--text-secondary);
+}
+
+.order-total-amount {
+    color: var(--primary-blue);
+}
+
+.no-orders {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+}
+
+.no-orders-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.no-orders-text {
+    font-size: 18px;
+    margin-bottom: 8px;
+}
+
+.no-orders-subtext {
+    font-size: 14px;
 }

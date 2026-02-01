@@ -47,10 +47,28 @@ app.get('/api/products/:id', (req, res) => {
 
 // API для получения истории заказов (только для админа)
 app.get('/api/orders', (req, res) => {
-  // В продакшене добавьте аутентификацию!
   try {
-    const orders = JSON.parse(fs.readFileSync(ordersPath, 'utf-8'));
-    res.json(orders);
+    const email = req.query.email;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email обязателен' });
+    }
+    
+    // Читаем все заказы
+    let orders = [];
+    try {
+      orders = JSON.parse(fs.readFileSync(ordersPath, 'utf-8'));
+    } catch (error) {
+      // Файл не существует или пуст
+      console.log('Файл заказов пуст или не существует');
+    }
+    
+    // Фильтруем заказы по email
+    const userOrders = orders.filter(order => 
+      order.email && order.email.toLowerCase() === email.toLowerCase()
+    );
+    
+    res.json({ orders: userOrders });
   } catch (error) {
     console.error('Ошибка чтения заказов:', error);
     res.status(500).json({ error: 'Ошибка загрузки заказов' });
@@ -103,13 +121,20 @@ app.post('/api/order', async (req, res) => {
     fs.writeFileSync(keysPath, JSON.stringify(keys, null, 2));
     
     // Сохраняем заказ
-    const orders = JSON.parse(fs.readFileSync(ordersPath, 'utf-8'));
+    let orders = [];
+    try {
+      orders = JSON.parse(fs.readFileSync(ordersPath, 'utf-8'));
+    } catch (error) {
+      // Файл не существует, создаем пустой массив
+      console.log('Создаем новый файл заказов');
+    }
+    
     const order = {
       id: `order_${Date.now()}`,
       ...orderData,
       keys: orderKeys,
       status: 'completed',
-      created_at: new Date().toISOString()
+      timestamp: new Date().toISOString()
     };
     orders.push(order);
     fs.writeFileSync(ordersPath, JSON.stringify(orders, null, 2));
