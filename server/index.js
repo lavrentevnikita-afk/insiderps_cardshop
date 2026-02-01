@@ -12,17 +12,24 @@ const { sendKeysEmail } = require('./emailService');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy (nginx, cloudflare, etc.)
+app.set('trust proxy', 1);
+
 // Rate limiting
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 минут
   max: 100, // максимум 100 запросов с одного IP
-  message: 'Слишком много запросов, попробуйте позже'
+  message: 'Слишком много запросов, попробуйте позже',
+  standardHeaders: true,
+  legacyHeaders: false
 });
 
 const orderLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 час
   max: 10, // максимум 10 заказов в час
-  message: 'Превышен лимит заказов, попробуйте через час'
+  message: 'Превышен лимит заказов, попробуйте через час',
+  standardHeaders: true,
+  legacyHeaders: false
 });
 
 // Middleware
