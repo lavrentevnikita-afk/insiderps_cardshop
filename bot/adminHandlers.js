@@ -1,5 +1,8 @@
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process');
+const util = require('util');
+const execPromise = util.promisify(exec);
 
 // Admin ID - добавьте свой Telegram ID
 const ADMIN_ID = process.env.ADMIN_ID ? parseInt(process.env.ADMIN_ID) : null;
@@ -11,6 +14,26 @@ function isAdmin(userId) {
         return false;
     }
     return userId === ADMIN_ID;
+}
+
+// Auto-commit and push changes to GitHub
+async function syncToGitHub(message) {
+    try {
+        const { stdout, stderr } = await execPromise(
+            'cd /app && git add data/products.json && git commit -m "' + message + '" && git push',
+            { cwd: '/app' }
+        );
+        console.log('✅ Изменения запушены в GitHub:', message);
+        return true;
+    } catch (error) {
+        // Игнорируем ошибку если нет изменений
+        if (error.message.includes('nothing to commit')) {
+            console.log('ℹ️ Нет изменений для коммита');
+            return true;
+        }
+        console.error('⚠️ Ошибка git push:', error.message);
+        return false;
+    }
 }
 
 // Middleware to check admin access
@@ -354,11 +377,16 @@ async function handleSetPriceCommand(bot, msg) {
         
         fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
         
+        // Синхронизируем с GitHub
+        const synced = await syncToGitHub(`Обновлена цена ${productId}: ${oldPrice}₽ → ${newPrice}₽`);
+        const syncStatus = synced ? '\n\n🔄 Изменения синхронизированы с сайтом!' : '\n\n⚠️ Изменения сохранены локально';
+        
         bot.sendMessage(chatId, 
             `✅ Цена товара обновлена!\n\n` +
             `📦 ${products[productIndex].name}\n` +
             `💰 Старая цена: ${oldPrice}₽\n` +
-            `💰 Новая цена: ${newPrice}₽`
+            `💰 Новая цена: ${newPrice}₽` +
+            syncStatus
         );
     });
 }
@@ -398,12 +426,17 @@ async function handleSetDiscountCommand(bot, msg) {
         
         fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
         
+        // Синхронизируем с GitHub
+        const synced = await syncToGitHub(`Обновлена скидка ${productId}: ${oldDiscount}% → ${newDiscount}%`);
+        const syncStatus = synced ? '\n\n🔄 Изменения синхронизированы с сайтом!' : '\n\n⚠️ Изменения сохранены локально';
+        
         bot.sendMessage(chatId, 
             `✅ Скидка обновлена!\n\n` +
             `📦 ${products[productIndex].name}\n` +
             `🏷 Старая скидка: ${oldDiscount}%\n` +
             `🏷 Новая скидка: ${newDiscount}%\n` +
-            `💰 Цена со скидкой: ${products[productIndex].price}₽`
+            `💰 Цена со скидкой: ${products[productIndex].price}₽` +
+            syncStatus
         );
     });
 }
