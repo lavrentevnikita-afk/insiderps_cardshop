@@ -78,82 +78,30 @@ psshop/
 └── package.json              # Зависимости проекта
 ```
 
-## ⚙️ Быстрый старт
+## ⚙️ Управление
 
-### Локальная разработка
+### Обновление на сервере
 
-1. **Клонирование и установка:**
 ```bash
-git clone https://github.com/lavrentevnikita-afk/insiderps_cardshop.git
-cd insiderps_cardshop
+cd /var/www/insiderps_cardshop
+git pull
 npm install
+pm2 restart all
 ```
 
-2. **Настройка .env:**
-```env
-BOT_TOKEN=your_bot_token_from_botfather
-PAYMENT_TOKEN=your_payment_provider_token
-WEBAPP_URL=http://localhost:3000
-PORT=3000
-ADMIN_ID=your_telegram_id
-```
+### Проверка статуса
 
-3. **Запуск:**
 ```bash
-npm start
-```
-
-Бот запустится на `http://localhost:3000`
-
-### Деплой на VPS
-
-Полная инструкция в [INSTALLATION.md](INSTALLATION.md)
-
-**Краткая версия:**
-
-1. **Подключение к VPS:**
-```bash
-ssh root@your-server-ip
-```
-
-2. **Установка зависимостей:**
-```bash
-apt update && apt upgrade -y
-curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-apt install -y nodejs git nginx certbot python3-certbot-nginx
-npm install -g pm2
-```
-
-3. **Клонирование проекта:**
-```bash
-cd /var/www
-git clone https://github.com/lavrentevnikita-afk/insiderps_cardshop.git
-cd insiderps_cardshop
-npm install
-```
-
-4. **Настройка .env и запуск:**
-```bash
-nano .env  # заполнить переменные
-pm2 start bot/index.js --name psshop-bot
-pm2 start server/index.js --name psshop-server
-pm2 startup
-pm2 save
-```
-
-5. **Настройка Nginx и SSL:**
-```bash
-nano /etc/nginx/sites-available/yourdomain.com
-systemctl restart nginx
-certbot --nginx -d yourdomain.com -d www.yourdomain.com
+pm2 status
+pm2 logs psshop-server --lines 50
+pm2 logs psshop-bot --lines 50
 ```
 
 ## 📚 Документация
 
-- **[INSTALLATION.md](INSTALLATION.md)** - Полная инструкция по установке
+- **[CHEATSHEET.md](CHEATSHEET.md)** - Шпаргалка администратора
+- **[PRODUCT_MANAGEMENT.md](PRODUCT_MANAGEMENT.md)** - Управление товарами
 - **[ADMIN.md](ADMIN.md)** - Руководство администратора
-- **[CHEATSHEET.md](CHEATSHEET.md)** - Шпаргалка админа
-- **[ROADMAP.md](ROADMAP.md)** - Планы развития
 
 ## 🎯 API Endpoints
 
@@ -233,9 +181,9 @@ certbot --nginx -d yourdomain.com -d www.yourdomain.com
 ]
 ```
 
-## 🚀 Развертывание обновлений
+## 🚀 Управление на сервере
 
-На сервере выполните:
+### Обновление проекта
 
 ```bash
 cd /var/www/insiderps_cardshop
@@ -244,18 +192,18 @@ cd /var/www/insiderps_cardshop
 
 Или вручную:
 ```bash
-git pull origin main
+git pull
 npm install
 pm2 restart all
 ```
 
-## 🤝 Вклад в проект
+### Проверка статуса
 
-1. Fork проекта
-2. Создайте feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit изменения (`git commit -m 'Add some AmazingFeature'`)
-4. Push в branch (`git push origin feature/AmazingFeature`)
-5. Откройте Pull Request
+```bash
+pm2 status
+pm2 logs psshop-server --lines 50
+pm2 logs psshop-bot --lines 50
+```
 
 ## 📝 Лицензия
 

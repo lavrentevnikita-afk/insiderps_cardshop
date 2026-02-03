@@ -131,73 +131,33 @@ tr_250  # 250₺
 
 ---
 
-## 🖥️ Серверные команды
-
-### SSH подключение
-```bash
-ssh root@84.252.74.101
-```
+## 🖥️ Управление сервером
 
 ### PM2 (Process Manager)
 ```bash
 pm2 status                       # Статус процессов
 pm2 restart all                  # Перезапуск всех
-pm2 restart psshop-bot           # Перезапуск бота
-pm2 restart psshop-server        # Перезапуск сервера
-pm2 logs                         # Просмотр логов
-pm2 logs psshop-bot              # Логи бота
-pm2 logs psshop-server           # Логи сервера
+pm2 logs psshop-bot --lines 50   # Логи бота
+pm2 logs psshop-server --lines 50 # Логи сервера
 pm2 monit                        # Мониторинг в реальном времени
-pm2 stop all                     # Остановить все
-pm2 start all                    # Запустить все
 ```
 
-### Git обновления
+### Обновление проекта
 ```bash
 cd /var/www/insiderps_cardshop
-git pull origin main             # Получить обновления
-npm install                      # Обновить зависимости
-pm2 restart all                  # Перезапустить
+./update.sh                      # Автоматическое обновление
 ```
 
-### Быстрое обновление (update.sh)
+Или вручную:
 ```bash
-cd /var/www/insiderps_cardshop
-./update.sh                      # Всё в одной команде
-```
-
-### Nginx
-```bash
-systemctl status nginx           # Статус
-systemctl restart nginx          # Перезапуск
-systemctl stop nginx             # Остановить
-systemctl start nginx            # Запустить
-nginx -t                         # Проверка конфигурации
-nano /etc/nginx/sites-available/insiderplaystation.ru  # Редактировать конфиг
-```
-
-### SSL сертификаты
-```bash
-certbot renew                    # Обновить сертификаты
-certbot certificates             # Список сертификатов
-certbot --nginx -d insiderplaystation.ru -d www.insiderplaystation.ru  # Установить SSL
-```
-
-### Логи сервера
-```bash
-tail -f /var/log/nginx/error.log             # Ошибки Nginx
-tail -f /var/log/nginx/access.log            # Доступ Nginx
-pm2 logs psshop-bot --lines 50               # 50 последних строк бота
-pm2 logs psshop-server --lines 50            # 50 последних строк сервера
+git pull
+npm install
+pm2 restart all
 ```
 
 ---
 
 ## 📂 Важные файлы
-
-### На сервере
-```
-/var/www/insiderps_cardshop/          # Корень проекта
 ├── .env                               # Конфигурация
 ├── data/products.json                 # Товары
 ├── data/keys.json                     # Ключи
