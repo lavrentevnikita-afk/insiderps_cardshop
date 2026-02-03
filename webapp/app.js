@@ -343,7 +343,7 @@ function createProductCard(product) {
                 </div>
                 <div class="product-price">
                     ${product.price}₽
-                    ${product.discount > 0 ? `<span>${Math.round(product.price / (1 - product.discount / 100))}₽</span>` : ''}
+                    ${product.discount > 0 ? `<span class="price-old">${Math.round(product.price / (1 - product.discount / 100))}₽</span>` : ''}
                 </div>
             </div>
         </div>
